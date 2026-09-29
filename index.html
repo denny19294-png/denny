@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>邁向 2027：100 項人生必做清單與年度盤點</title>
+  <title>邁向 2028：100 項人生必做清單與年度盤點</title>
   
   <!-- Inline SVG Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
@@ -185,12 +185,12 @@
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
               <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300">
-                目標期限：2026 年 12 月 31 日前
+                目標期限：2027 年 12 月 31 日前
               </span>
-              <h2 class="text-xl font-bold text-slate-800 dark:text-white mt-2">走向 2027 的 100 個全方位行動計畫</h2>
+              <h2 class="text-xl font-bold text-slate-800 dark:text-white mt-2">走向 2028 的 100 個全方位行動計畫</h2>
             </div>
             <div class="text-right">
-              <span class="text-xs text-slate-500 dark:text-slate-400">距離 2027 年倒數</span>
+              <span class="text-xs text-slate-500 dark:text-slate-400">距離 2028 年倒數</span>
               <div id="countdown-days" class="text-2xl font-black text-indigo-600 dark:text-indigo-400">--- 天</div>
             </div>
           </div>
@@ -279,7 +279,7 @@
             <span>2027 年底總結與盤點心得寫作畫布</span>
           </h2>
           <p class="text-sm text-slate-300 mt-1">
-            當時間來到 2026 年底與 2027 年初，請在此靜心寫下您的回顧、感悟與成果盤點。
+            當時間來到 2027 年底與 2028 年初，請在此靜心寫下您的回顧、感悟與成果盤點。
           </p>
         </div>
         <div class="text-xs bg-white/10 px-3 py-2 rounded-xl backdrop-blur-sm self-start md:self-auto text-slate-300">
@@ -311,7 +311,7 @@
         <div class="space-y-2 bg-white/5 p-4 rounded-xl border border-white/10 md:col-span-2">
           <label class="block text-sm font-semibold text-indigo-200 flex items-center gap-2">
             <i class="fa-solid fa-envelope-open-text text-sky-400"></i>
-            <span>3. 站在 2027 年的起點，給未來的自己一封信與總體心得：</span>
+            <span>3. 站在 2028 年的起點，給未來的自己一封信與總體心得：</span>
           </label>
           <textarea id="reflection-letter" rows="5" placeholder="寫給迎向全新階段的自己... 感謝這幾年來堅持不懈的努力，未來的我準備好了！" class="w-full bg-slate-950/60 border border-slate-700 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 custom-scrollbar"></textarea>
         </div>
@@ -372,7 +372,7 @@
   <!-- Footer -->
   <footer class="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-6 mt-12 no-print">
     <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 dark:text-slate-400 space-y-1">
-      <p>邁向 2027 年願景畫布與目標實踐系統 | 隨時瀏覽、紀錄與回顧</p>
+      <p>邁向 2028 年願景畫布與目標實踐系統 | 隨時瀏覽、紀錄與回顧</p>
       <p class="text-slate-400 dark:text-slate-500">所有資料均自動加密安全儲存於您的本機瀏覽器中</p>
     </div>
   </footer>
@@ -513,7 +513,7 @@
       { id: 100, category: "CONTRIBUTION", title: "傳播正能量，成為讓身邊世界變得稍微更好一點的人" }
     ];
 
-    const STORAGE_KEY = '2027_goals_app_state_v1';
+    const STORAGE_KEY = '2028_goals_app_state_v1';
     let state = {
       goals: [],
       reflections: { achievements: "", learnings: "", letter: "" }
@@ -645,7 +645,7 @@
 
           const opt = {
             margin:       [0.3, 0.3, 0.4, 0.3],
-            filename:     `2027年100項必做事項與盤點報告_${new Date().toISOString().split('T')[0]}.pdf`,
+            filename:     `2028年100項必做事項與盤點報告_${new Date().toISOString().split('T')[0]}.pdf`,
             image:        { type: 'jpeg', quality: 0.98 },
             html2canvas:  { 
               scale: 2, 
@@ -875,7 +875,7 @@
       
       const daysElem = document.getElementById("countdown-days");
       if (daysElem) {
-        daysElem.innerText = diffDays > 0 ? `${diffDays} 天` : "已邁入 2027！";
+        daysElem.innerText = diffDays > 0 ? `${diffDays} 天` : "已邁入 2028！";
       }
     }
 
