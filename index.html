@@ -107,11 +107,11 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-md font-bold text-lg">
-          27
+          28
         </div>
         <div>
           <h1 class="text-lg font-bold bg-gradient-to-r from-sky-600 to-indigo-600 dark:from-sky-400 dark:to-indigo-400 bg-clip-text text-transparent">
-            2027 年前必做 100 件事
+            2028 年前必做 100 件事
           </h1>
           <p class="text-xs text-slate-500 dark:text-slate-400">人生願景畫布與目標追蹤系統</p>
         </div>
@@ -161,7 +161,7 @@
     
     <!-- Printable Header Banner (Only visible in PDF export) -->
     <div class="print-only mb-6 border-b pb-4">
-      <h1 class="text-3xl font-bold text-slate-900">2027年前 100 項必做事項與盤點報告</h1>
+      <h1 class="text-3xl font-bold text-slate-900">2028 年前 100 項必做事項與盤點報告</h1>
       <p class="text-sm text-slate-600 mt-1">匯出日期：<span id="pdf-export-date"></span> | 整體完成進度：<span id="pdf-export-progress">0%</span></p>
     </div>
 
@@ -184,13 +184,13 @@
         <div class="space-y-4 lg:col-span-2">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300">
-                目標期限：2027 年 12 月 31 日前
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300">
+                🎯 目標期限：2028 年 12 月 31 日前
               </span>
               <h2 class="text-xl font-bold text-slate-800 dark:text-white mt-2">走向 2028 的 100 個全方位行動計畫</h2>
             </div>
             <div class="text-right">
-              <span class="text-xs text-slate-500 dark:text-slate-400">距離 2028 年倒數</span>
+              <span class="text-xs text-slate-500 dark:text-slate-400">距離 2028 年底倒數</span>
               <div id="countdown-days" class="text-2xl font-black text-indigo-600 dark:text-indigo-400">--- 天</div>
             </div>
           </div>
@@ -267,7 +267,7 @@
       </div>
     </section>
 
-    <!-- Year-End 2027 Reflection Canvas Section -->
+    <!-- Year-End 2028 Reflection Canvas Section -->
     <section class="bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-900 text-white rounded-2xl p-6 md:p-8 shadow-xl space-y-6">
       <div class="border-b border-indigo-500/30 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -276,10 +276,10 @@
           </span>
           <h2 class="text-2xl font-bold flex items-center gap-2">
             <i class="fa-solid fa-feather-pointed text-indigo-400"></i>
-            <span>2027 年底總結與盤點心得寫作畫布</span>
+            <span>2028 年底總結與盤點心得寫作畫布</span>
           </h2>
           <p class="text-sm text-slate-300 mt-1">
-            當時間來到 2027 年底與 2028 年初，請在此靜心寫下您的回顧、感悟與成果盤點。
+            當時間來到 2028 年 12 月 31 日前，請在此靜心寫下您的回顧、感悟與成果盤點。
           </p>
         </div>
         <div class="text-xs bg-white/10 px-3 py-2 rounded-xl backdrop-blur-sm self-start md:self-auto text-slate-300">
@@ -311,7 +311,7 @@
         <div class="space-y-2 bg-white/5 p-4 rounded-xl border border-white/10 md:col-span-2">
           <label class="block text-sm font-semibold text-indigo-200 flex items-center gap-2">
             <i class="fa-solid fa-envelope-open-text text-sky-400"></i>
-            <span>3. 站在 2028 年的起點，給未來的自己一封信與總體心得：</span>
+            <span>3. 站在 2028 年底的終點與全新的起點，給未來的自己一封信與總體心得：</span>
           </label>
           <textarea id="reflection-letter" rows="5" placeholder="寫給迎向全新階段的自己... 感謝這幾年來堅持不懈的努力，未來的我準備好了！" class="w-full bg-slate-950/60 border border-slate-700 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 custom-scrollbar"></textarea>
         </div>
@@ -532,7 +532,18 @@
           initDefaultState();
         }
       } else {
-        initDefaultState();
+        // Fallback or migration check from older key if available
+        const oldSaved = localStorage.getItem('2027_goals_app_state_v1');
+        if (oldSaved) {
+          try {
+            state = JSON.parse(oldSaved);
+            saveState(); // Save to new key
+          } catch(e) {
+            initDefaultState();
+          }
+        } else {
+          initDefaultState();
+        }
       }
     }
 
@@ -681,7 +692,7 @@
           const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
           const downloadAnchor = document.createElement('a');
           downloadAnchor.setAttribute("href", dataStr);
-          downloadAnchor.setAttribute("download", `2027_Goals_Backup_${new Date().toISOString().split('T')[0]}.json`);
+          downloadAnchor.setAttribute("download", `2028_Goals_Backup_${new Date().toISOString().split('T')[0]}.json`);
           document.body.appendChild(downloadAnchor);
           downloadAnchor.click();
           downloadAnchor.remove();
@@ -868,14 +879,15 @@
     }
 
     function updateCountdown() {
-      const targetDate = new Date("2027-01-01T00:00:00");
+      // Set target deadline to 2028-12-31 23:59:59 (or 2029-01-01 00:00:00)
+      const targetDate = new Date("2028-12-31T23:59:59");
       const now = new Date();
       const diffTime = targetDate - now;
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       
       const daysElem = document.getElementById("countdown-days");
       if (daysElem) {
-        daysElem.innerText = diffDays > 0 ? `${diffDays} 天` : "已邁入 2028！";
+        daysElem.innerText = diffDays > 0 ? `${diffDays} 天` : "已到達期限！";
       }
     }
 
