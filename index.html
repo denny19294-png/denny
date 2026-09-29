@@ -122,6 +122,12 @@
           <i class="fa-solid fa-sun hidden dark:block text-amber-400"></i>
         </button>
 
+        <!-- Reset 100 Goals -->
+        <button id="btn-reset-goals" class="p-2 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg text-sm flex items-center space-x-1" title="重設為預設 100 項">
+          <i class="fa-solid fa-rotate-left"></i>
+          <span class="hidden md:inline">重設100項</span>
+        </button>
+
         <!-- Backup Data -->
         <button id="btn-export-json" class="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-sm flex items-center space-x-1" title="下載 JSON 備份檔">
           <i class="fa-solid fa-download"></i>
@@ -337,6 +343,23 @@
     </div>
   </div>
 
+  <!-- Reset Confirmation Modal -->
+  <div id="modal-reset-confirm" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden no-print">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 text-center">
+      <div class="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto text-xl">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <h3 class="text-lg font-bold text-slate-800 dark:text-white">重設 100 項預設清單？</h3>
+      <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+        這將會重置所有目標項目的打勾狀態與自訂內容，重新載入預設的 100 項願景清單。
+      </p>
+      <div class="flex justify-center space-x-2 pt-2">
+        <button id="btn-cancel-reset" class="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl">取消</button>
+        <button id="btn-confirm-reset" class="px-4 py-2 text-sm font-medium bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-md transition">確認重設</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Footer -->
   <footer class="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-6 mt-12 no-print">
     <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 dark:text-slate-400 space-y-1">
@@ -346,142 +369,160 @@
   </footer>
 
   <script>
-    
-    // 10 categories with color themes and FontAwesome icons
     const CATEGORIES = {
-      "GROWTH": { name: "個人學習與成長", icon: "fa-brain", color: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800" },
-      "HEALTH": { name: "身心健康與體態", icon: "fa-heart-pulse", color: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800" },
-      "CAREER": { name: "財務自由與事業", icon: "fa-briefcase", color: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800" },
-      "TRAVEL": { name: "旅遊與世界探索", icon: "fa-plane", color: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800" },
-      "HOBBY": { name: "興趣與創意表達", icon: "fa-palette", color: "bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-800" },
-      "RELATION": { name: "人際關係與情感", icon: "fa-users", color: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800" },
-      "LIFESTYLE": { name: "生活品質與居住", icon: "fa-house-chimney", color: "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800" },
-      "MIND": { name: "心理健康與靈性", icon: "fa-spa", color: "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800" },
-      "IMPACT": { name: "社會貢獻與利他", icon: "fa-hand-holding-heart", color: "bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300 dark:border-cyan-800" },
-      "MILESTONE": { name: "重大里程碑夢想", icon: "fa-flag-checkered", color: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800" }
+      CAREER: { name: "職涯發展", icon: "fa-briefcase", color: "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800" },
+      WEALTH: { name: "理財投資", icon: "fa-coins", color: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800" },
+      HEALTH: { name: "健康運動", icon: "fa-heart-pulse", color: "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800" },
+      LEARNING: { name: "自我成長", icon: "fa-graduation-cap", color: "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800" },
+      TRAVEL: { name: "旅行探索", icon: "fa-plane", color: "bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800" },
+      RELATIONSHIP: { name: "人際家庭", icon: "fa-users", color: "bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 border-pink-200 dark:border-pink-800" },
+      LIFE: { name: "生活品味", icon: "fa-mug-hot", color: "bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800" },
+      CREATIVITY: { name: "創作作品", icon: "fa-palette", color: "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800" },
+      MINDFULNESS: { name: "心靈靈性", icon: "fa-spa", color: "bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800" },
+      CONTRIBUTION: { name: "社會奉獻", icon: "fa-hand-holding-heart", color: "bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800" }
     };
 
     const DEFAULT_GOALS = [
-      // 1. 個人學習與成長 (1-10)
-      { id: 1, category: "GROWTH", title: "每年閱讀至少 12 本非虛構好書並寫下心得" },
-      { id: 2, category: "GROWTH", title: "精通一門外語或達日常檢定流利溝通程度" },
-      { id: 3, category: "GROWTH", title: "完成一門高階線上專業課程或考取一張專業證照" },
-      { id: 4, category: "GROWTH", title: "建立一套個人數位知識管理系統 (如 Notion/Obsidian)" },
-      { id: 5, category: "GROWTH", title: "養成每日寫日誌或晨間隨筆的習慣 (持之以恆)" },
-      { id: 6, category: "GROWTH", title: "學習一項 AI 提詞、程式設計或影音剪輯工具" },
-      { id: 7, category: "GROWTH", title: "參加一次公開演講、簡報分享或線上論壇" },
-      { id: 8, category: "GROWTH", title: "精讀並實踐一本關於時間管理的經典著作" },
-      { id: 9, category: "GROWTH", title: "建立每日固定 30 分鐘無手機專注閱讀時間" },
-      { id: 10, category: "GROWTH", title: "參加一場國際性高峰會、展覽或跨領域研討會" },
+      // 職涯發展 (1-10)
+      { id: 1, category: "CAREER", title: "建立個人的專業作品集網站或數位履歷" },
+      { id: 2, category: "CAREER", title: "獲得一項高含金量或專業領域認證/證照" },
+      { id: 3, category: "CAREER", title: "主導完成一個跨部門或創新型重大專案" },
+      { id: 4, category: "CAREER", title: "升遷、轉職至理想職位或完成一次職涯跳躍" },
+      { id: 5, category: "CAREER", title: "擔任一次業界研討會、講座或內部分享會主講人" },
+      { id: 6, category: "CAREER", title: "尋找一位職涯導師（Mentor）或成為他人的導師" },
+      { id: 7, category: "CAREER", title: "建立優質專業 networking 圈（認識 10 位領域優秀同仁）" },
+      { id: 8, category: "CAREER", title: "學習並熟練運用 AI 工具提升 50% 工作效率" },
+      { id: 9, category: "CAREER", title: "啟動一個個人副業或自由職業業務" },
+      { id: 10, category: "CAREER", title: "達成個人年度績效考評（OKRs/KPIs）頂尖評等" },
 
-      // 2. 身心健康與體態 (11-20)
-      { id: 11, category: "HEALTH", title: "完成一次馬拉松（半馬/全馬）或 10K 挑戰" },
-      { id: 12, category: "HEALTH", title: "達到個人的理想體脂肪率與體態目標" },
-      { id: 13, category: "HEALTH", title: "解鎖一項水上或戶外運動（衝浪、自由潛水、滑雪等）" },
-      { id: 14, category: "HEALTH", title: "建立一週至少 3 次規律運動習慣並持續一整年" },
-      { id: 15, category: "HEALTH", title: "進行一次全身深度健檢並建立健康紀錄檔案" },
-      { id: 16, category: "HEALTH", title: "挑戰連續 30 天不喝含糖飲料與手搖飲" },
-      { id: 17, category: "HEALTH", title: "學會 10 道健康美味的家常減脂/高蛋白料理" },
-      { id: 18, category: "HEALTH", title: "調整睡眠作息（每日睡眠達 7-8 小時，減少熬夜）" },
-      { id: 19, category: "HEALTH", title: "解鎖一次台灣百岳登山或百里徒步健行" },
-      { id: 20, category: "HEALTH", title: "進行一次連續 7 天的數位斷捨離 (減少螢幕時間)" },
+      // 理財投資 (11-20)
+      { id: 11, category: "WEALTH", title: "建立緊急預備金（至少 6 個月生活費）" },
+      { id: 12, category: "WEALTH", title: "定期定額投資 ETF 或高質量資產，建立被動收入機制" },
+      { id: 13, category: "WEALTH", title: "完成年度資產盤點與財務自由淨值規劃" },
+      { id: 14, category: "WEALTH", title: "閱讀 5 本經典理財/投資著作" },
+      { id: 15, category: "WEALTH", title: "徹底清理不必要訂閱服務與無效消費習慣" },
+      { id: 16, category: "WEALTH", title: "嘗試打造一種自動化或半自動化收益管道" },
+      { id: 17, category: "WEALTH", title: "為自己與家人配置足夠且合適的保險保障" },
+      { id: 18, category: "WEALTH", title: "實現一個重要的財務儲蓄里程碑" },
+      { id: 19, category: "WEALTH", title: "建立系統化記帳與預算控管習慣（持續 100 天以上）" },
+      { id: 20, category: "WEALTH", title: "了解基本稅務知識並規劃合規節稅方案" },
 
-      // 3. 財務自由與事業 (21-30)
-      { id: 21, category: "CAREER", title: "建立緊急預備金（存足 6 個月以上生活費）" },
-      { id: 22, category: "CAREER", title: "打造至少一種本業以外的被動收入或副業渠道" },
-      { id: 23, category: "CAREER", title: "制定並長期執行個人資產配置策略（股票/ETF）" },
-      { id: 24, category: "CAREER", title: "達成個人的第一個階段性總資產目標" },
-      { id: 25, category: "CAREER", title: "清查個人財務狀況，消滅所有非必要高利負債" },
-      { id: 26, category: "CAREER", title: "在現有事業上獲得一次升遷、加薪或成功主導專案" },
-      { id: 27, category: "CAREER", title: "建立專屬的年度預算與精細收支記帳習慣" },
-      { id: 28, category: "CAREER", title: "請教或訪談 3 位在目標領域優秀的導師前輩" },
-      { id: 29, category: "CAREER", title: "閱讀 5 本經典理財與商業書籍並建立投資紀律" },
-      { id: 30, category: "CAREER", title: "製作並定時更新個人的資產負債表與淨值曲線" },
+      // 健康運動 (21-30)
+      { id: 21, category: "HEALTH", title: "養成每週規律運動 3 次（每次 30 分鐘以上）習慣" },
+      { id: 22, category: "HEALTH", title: "挑戰並完成一次半程馬拉松（21K）或 10K 路跑" },
+      { id: 23, category: "HEALTH", title: "達成理想體重與體脂肪率目標" },
+      { id: 24, category: "HEALTH", title: "完成一次全身深度健康檢查並追蹤指標" },
+      { id: 25, category: "HEALTH", title: "改善睡眠品質，建立每晚固定時間入睡的作息" },
+      { id: 26, category: "HEALTH", title: "學習一項全新的運動（如攀岩、滑雪、衝浪、瑜珈等）" },
+      { id: 27, category: "HEALTH", title: "進行連續 30 天無糖/低糖飲食挑戰" },
+      { id: 28, category: "HEALTH", title: "每日飲水量達到 2000c.c. 以上並維持 3 個月" },
+      { id: 29, category: "HEALTH", title: "學習一套專業伸展或姿態矯正方法" },
+      { id: 30, category: "HEALTH", title: "完成一次天數為 3 天以上的健康飲食淨化體驗" },
 
-      // 4. 旅遊與世界探索 (31-40)
-      { id: 31, category: "TRAVEL", title: "前往一個從未去過的新國家或文化區旅行" },
-      { id: 32, category: "TRAVEL", title: "體驗一次獨自一人旅行（Solo Travel）至少 3 天" },
-      { id: 33, category: "TRAVEL", title: "親眼欣賞一次極光、星空大賞或壯麗自然奇景" },
-      { id: 34, category: "TRAVEL", title: "安排一次無後顧之憂的深度度假（徹底關閉工作訊息）" },
-      { id: 35, category: "TRAVEL", title: "體驗一次豪華露營 (Glamping) 或野外露營探險" },
-      { id: 36, category: "TRAVEL", title: "搭乘一次景觀列車或郵輪旅行" },
-      { id: 37, category: "TRAVEL", title: "深度走訪 3 個從未去過的秘境城鄉" },
-      { id: 38, category: "TRAVEL", title: "在異國品嚐一次在地星級或特色無菜單料理" },
-      { id: 39, category: "TRAVEL", title: "參觀一次世界級博物館或歷史文化遺產" },
-      { id: 40, category: "TRAVEL", title: "完成一次說走就走的無計畫週末小旅行" },
+      // 自我成長 (31-40)
+      { id: 31, category: "LEARNING", title: "精通一門外語的口語溝通（如英文、日文、西文等）" },
+      { id: 32, category: "LEARNING", title: "每年閱讀至少 24 本好書並撰寫讀書心得" },
+      { id: 33, category: "LEARNING", title: "學習一門程式語言或自動化腳本（如 Python, JS 等）" },
+      { id: 34, category: "LEARNING", title: "參加一場實體工作坊或短期訓練營" },
+      { id: 35, category: "LEARNING", title: "學習一項樂器並能完整演奏至少 3 首曲目" },
+      { id: 36, category: "LEARNING", title: "熟練掌握心智圖與卡片盒筆記法（Obsidian/Notion 等）" },
+      { id: 37, category: "LEARNING", title: "學習基礎視覺設計、修圖或影片剪輯技巧" },
+      { id: 38, category: "LEARNING", title: "研讀心理學或行為經濟學相關基礎著作" },
+      { id: 39, category: "LEARNING", title: "報名參加一門完整線上深度課程並取得結業證書" },
+      { id: 40, category: "LEARNING", title: "挑戰一天不接觸數位螢幕（Digital Detox）的沉浸體驗" },
 
-      // 5. 興趣與創意表達 (41-50)
-      { id: 41, category: "HOBBY", title: "學會演奏一首自己最愛的樂器曲目" },
-      { id: 42, category: "HOBBY", title: "完成一部個人的影音創作作品（Vlog 或短片）" },
-      { id: 43, category: "HOBBY", title: "創作一件屬於自己的藝術品（油畫、陶藝、手作）" },
-      { id: 44, category: "HOBBY", title: "設計並印製一份專屬的個人相片集或年度作品集" },
-      { id: 45, category: "HOBBY", title: "寫下一篇故事、散文或 5,000 字以上的文字作品" },
-      { id: 46, category: "HOBBY", title: "培養並維護一個綠色植物花園或室內植物角落" },
-      { id: 47, category: "HOBBY", title: "學習並熟練掌握底片相機或專業攝影構圖" },
-      { id: 48, category: "HOBBY", title: "參加一次手作工作坊（皮革、香氛、木工等）" },
-      { id: 49, category: "HOBBY", title: "舉辦一次主題式派對或溫馨同樂聚會" },
-      { id: 50, category: "HOBBY", title: "建立一個分享個人興趣的社交帳號或個人網站" },
+      // 旅行探索 (41-50)
+      { id: 41, category: "TRAVEL", title: "前往一個從未去過的國家或地區自助旅行" },
+      { id: 42, category: "TRAVEL", title: "體驗一次獨自一人旅行（Solo Travel）至少 3 天" },
+      { id: 43, category: "TRAVEL", title: "規劃一次深度鐵路或公路環島旅行" },
+      { id: 44, category: "TRAVEL", title: "在露營區享受無光害星空與野營樂趣" },
+      { id: 45, category: "TRAVEL", title: "參觀世界級博物館或歷史文化遺產景點" },
+      { id: 46, category: "TRAVEL", title: "體驗搭乘熱氣球或高空跳傘/飛行傘" },
+      { id: 47, category: "TRAVEL", title: "到海邊體驗一次潛水或水上滑板" },
+      { id: 48, category: "TRAVEL", title: "入住一次具有歷史特色或頂級奢華設計的旅宿" },
+      { id: 49, category: "TRAVEL", title: "前往高山步道挑戰百岳或著名登山步道登頂" },
+      { id: 50, category: "TRAVEL", title: "解鎖一次米其林餐廳的極致美食體驗" },
 
-      // 6. 人際關係與情感 (51-60)
-      { id: 51, category: "RELATION", title: "帶父母或家人進行一次多天數的家族旅行" },
-      { id: 52, category: "RELATION", title: "與一位多年未聯絡的老朋友重新取得聯繫並聚會" },
-      { id: 53, category: "RELATION", title: "給重要的人（伴侶/父母/好友）寫一封真摯手寫信" },
-      { id: 54, category: "RELATION", title: "安排定期與摯友的深度對話時光（不看手機）" },
-      { id: 55, category: "RELATION", title: "為家人或伴侶親自準備一頓豐盛美味的盛宴" },
-      { id: 56, category: "RELATION", title: "主動化解一段僵持已久的關係或放下過去心結" },
-      { id: 57, category: "RELATION", title: "建立一個互相支持、給予正能量的圈子" },
-      { id: 58, category: "RELATION", title: "在親友生日時送上一份充滿驚喜與回憶的專屬禮物" },
-      { id: 59, category: "RELATION", title: "學習並練習非暴力溝通與積極傾聽技能" },
-      { id: 60, category: "RELATION", title: "與伴侶/閨蜜共同完成一項需要長期合作的計畫" },
+      // 人際家庭 (51-60)
+      { id: 51, category: "RELATIONSHIP", title: "帶父母或家人進行一次多天數國內外全家旅行" },
+      { id: 52, category: "RELATIONSHIP", title: "與很久沒聯絡的知心老朋友重新聚會聯繫" },
+      { id: 53, category: "RELATIONSHIP", title: "每月安排一次無手機干擾的深度高品質陪伴" },
+      { id: 54, category: "RELATIONSHIP", title: "寫信或親手做禮物感謝生命中對自己重要的人" },
+      { id: 55, category: "RELATIONSHIP", title: "建立一個固定的同好社群或利基興趣交流小組" },
+      { id: 56, category: "RELATIONSHIP", title: "勇敢解開過往心中的某段誤會或心結" },
+      { id: 57, category: "RELATIONSHIP", title: "學習非暴力溝通（NVC）並落實於日常人際關係" },
+      { id: 58, category: "RELATIONSHIP", title: "舉辦一次溫馨的居家派對或聚會招待親友" },
+      { id: 59, category: "RELATIONSHIP", title: "陪同家人完成一個他們長久以來的心願" },
+      { id: 60, category: "RELATIONSHIP", title: "在人際交往中學會劃清健康界線與優雅拒絕" },
 
-      // 7. 生活品質與居住 (61-70)
-      { id: 61, category: "LIFESTYLE", title: "進行一次徹底的居家斷捨離，清除 50% 閒置物品" },
-      { id: 62, category: "LIFESTYLE", title: "重新佈置或改造一次自己的臥室/工作空間" },
-      { id: 63, category: "LIFESTYLE", title: "購買一件能顯著提升每日幸福感的高品質家電" },
-      { id: 64, category: "LIFESTYLE", title: "建立順暢的自動化居家清潔與整理流程" },
-      { id: 65, category: "LIFESTYLE", title: "打造一個專屬的沉靜冥想或放鬆閱讀角落" },
-      { id: 66, category: "LIFESTYLE", title: "體驗一次高質感 SPA、溫泉或身心放鬆療程" },
-      { id: 67, category: "LIFESTYLE", title: "定期購買鮮花或綠植佈置生活空間" },
-      { id: 68, category: "LIFESTYLE", title: "升級自己的睡眠品質裝備（床墊、枕頭、被單）" },
-      { id: 69, category: "LIFESTYLE", title: "整理並數位化個人所有重要文件與歷史相片" },
-      { id: 70, category: "LIFESTYLE", title: "建立個人的「儀式感」清單（如週日晨間咖啡時間）" },
+      // 生活品味 (61-70)
+      { id: 61, category: "LIFE", title: "徹底進行居家斷捨離，打造極簡舒適的生活空間" },
+      { id: 62, category: "LIFE", title: "建立專屬自己的晨間儀式（Morning Routine）" },
+      { id: 63, category: "LIFE", title: "學習烘焙或能烹飪出 5 道拿手招牌美味料理" },
+      { id: 64, category: "LIFE", title: "種植並照顧好植物/盆栽，體驗綠色植物的療癒" },
+      { id: 65, category: "LIFE", title: "打造一個舒適且符合人體工學的高效率工作/書房空間" },
+      { id: 66, category: "LIFE", title: "培養挑選優質咖啡豆與手沖咖啡的品味" },
+      { id: 67, category: "LIFE", title: "解鎖一次質感展覽、音樂會或舞台劇欣賞" },
+      { id: 68, category: "LIFE", title: "為自己購買一件高品質且能陪伴長久的心頭好物" },
+      { id: 69, category: "LIFE", title: "嘗試一次全黑暗或極靜環境中的自我放鬆體驗" },
+      { id: 70, category: "LIFE", title: "定期紀錄生活影音 Vlog 或文字日誌（累積 50 篇以上）" },
 
-      // 8. 心理健康與靈性 (71-80)
-      { id: 71, category: "MIND", title: "建立每日 10 分鐘冥想或正念呼吸練習" },
-      { id: 72, category: "MIND", title: "練習「感恩日記」，每天記錄 3 件值得感謝的事" },
-      { id: 73, category: "MIND", title: "學會接納自己的不完美，寫下個人的自我肯定清單" },
-      { id: 74, category: "MIND", title: "完成一次 24 小時徹底安靜無干擾的自我獨處" },
-      { id: 75, category: "MIND", title: "克服一項長期困擾自己的內心恐懼或焦慮源" },
-      { id: 76, category: "MIND", title: "學習辨識並拒絕情緒勒索，建立健康人際界線" },
-      { id: 77, category: "MIND", title: "寫下一份完整的「個人人生核心價值觀」聲明" },
-      { id: 78, category: "MIND", title: "閱讀 3 本心理學或哲學經典，探索自我內在" },
-      { id: 79, category: "MIND", title: "練習原諒過去對自己造成傷害的人或負面情緒" },
-      { id: 80, category: "MIND", title: "在遇到低潮時，熟練運用一套適合自己的自我修復機制" },
+      // 創作作品 (71-80)
+      { id: 71, category: "CREATIVITY", title: "寫下並發表一篇高價值的長文或系列主題文章" },
+      { id: 72, category: "CREATIVITY", title: "製作並發行屬於自己的 Podcast 音頻節目或影片" },
+      { id: 73, category: "CREATIVITY", title: "拍攝並整理一輯主題攝影作品集" },
+      { id: 74, category: "CREATIVITY", title: "設計並印製一份專屬自己的名片、手帳或週邊" },
+      { id: 75, category: "CREATIVITY", title: "嘗試手作工藝品（如陶藝、木工、皮件等）" },
+      { id: 76, category: "CREATIVITY", title: "撰寫一部短篇小說、電子書或知識小冊子" },
+      { id: 77, category: "CREATIVITY", title: "繪製一幅油畫、水彩畫或數位插畫作品" },
+      { id: 78, category: "CREATIVITY", title: "設計並架設一個個人的 Side Project 網站或 App" },
+      { id: 79, category: "CREATIVITY", title: "為自己或親友創作出一段音樂、詩歌或專屬禮物" },
+      { id: 80, category: "CREATIVITY", title: "參加一次創客（Maker）或文創市集展出" },
 
-      // 9. 社會貢獻與利他 (81-90)
-      { id: 81, category: "IMPACT", title: "參與一次志工服務或公益慈善活動" },
-      { id: 82, category: "IMPACT", title: "定期小額捐款給自己認同的公益團體或議題" },
-      { id: 83, category: "IMPACT", title: "進行一次無償的捐血（若身體條件允許）" },
-      { id: 84, category: "IMPACT", title: "無私地擔任一位學弟妹或後輩的職涯/生活導師" },
-      { id: 85, category: "IMPACT", title: "參與一次環保淨灘、淨山或社區環境清潔行動" },
-      { id: 86, category: "IMPACT", title: "送出 10 本對自己影響深遠的好書給需要的人" },
-      { id: 87, category: "IMPACT", title: "主動發起或支持一項友善環境的永續生活改變" },
-      { id: 88, category: "IMPACT", title: "進行 100 次無條件的微小善意（Random Acts of Kindness）" },
-      { id: 89, category: "IMPACT", title: "支持在地小農或社會企業產品" },
-      { id: 90, category: "IMPACT", title: "分享自己的專業經驗，幫助身邊至少 5 個人解決難題" },
+      // 心靈靈性 (81-90)
+      { id: 81, category: "MINDFULNESS", title: "養成每日正念冥想 10 分鐘的習慣（持續 60 天以上）" },
+      { id: 82, category: "MINDFULNESS", title: "撰寫每日感恩日記，記錄每天 3 件好事" },
+      { id: 83, category: "MINDFULNESS", title: "進行一次靜心禪修、瑜珈營或音療洗禮體驗" },
+      { id: 84, category: "MINDFULNESS", title: "學會接納自己的不完美與焦慮，練習自我關懷" },
+      { id: 85, category: "MINDFULNESS", title: "完成一次人生價值觀盤點，釐清核心優先順序" },
+      { id: 86, category: "MINDFULNESS", title: "在面對重大壓力時，建立一套有效復原與紓壓機制" },
+      { id: 87, category: "MINDFULNESS", title: "清理數位生活（清理相簿、刪除無用 App、整理信箱）" },
+      { id: 88, category: "MINDFULNESS", title: "嘗試連續一週完全不發布任何社群媒體動態" },
+      { id: 89, category: "MINDFULNESS", title: "與自我對話，寫下一封給 10 年後自己的信" },
+      { id: 90, category: "MINDFULNESS", title: "建立一個平靜放鬆的睡前儀式（Night Routine）" },
 
-      // 10. 重大里程碑夢想 (91-100)
-      { id: 91, category: "MILESTONE", title: "完成一項堅持了 100 天以上的習慣養成挑戰" },
-      { id: 92, category: "MILESTONE", title: "寫下一封給「2027 年底自己」的時空膠囊信件" },
-      { id: 93, category: "MILESTONE", title: "解鎖一項從小至今夢寐以求的夢想清單項目" },
-      { id: 94, category: "MILESTONE", title: "拍攝一張充滿自信與氣質的專業形象照/紀念寫真" },
-      { id: 95, category: "MILESTONE", title: "規劃並完成一次個人的「人生期中盤點與願景定位」" },
-      { id: 96, category: "MILESTONE", title: "擁有一個專屬個人的標誌性風格（穿搭/氣味/空間）" },
-      { id: 97, category: "MILESTONE", title: "勇敢向不合適的人事物道別，跨出舒適圈" },
-      { id: 98, category: "MILESTONE", title: "為自己準備一份歡慶重大成就的特別獎勵" },
-      { id: 99, category: "MILESTONE", title: "建立屬於自己的「成就博物館」（記錄榮耀與克服難關紀錄）" },
-      { id: 100, category: "MILESTONE", title: "站在 2026 年底/2027 年初，微笑並無憾地為這 100 件事打勾！" }
+      // 社會奉獻 (91-100)
+      { id: 91, category: "CONTRIBUTION", title: "定期捐款給信任的公益團體或社會倡議組織" },
+      { id: 92, category: "CONTRIBUTION", title: "參與一次志工服務活動（如淨灘、動物照顧、社區服務）" },
+      { id: 93, category: "CONTRIBUTION", title: "進行一次定期捐血或器官/骨髓捐贈登記" },
+      { id: 94, category: "CONTRIBUTION", title: "無私分享自己的專業知識，輔導一位後進新人" },
+      { id: 95, category: "CONTRIBUTION", title: "在日常生活中實踐減塑、環保與低碳生活習慣" },
+      { id: 96, category: "CONTRIBUTION", title: "發起或響應一次群眾募資或公益倡議計畫" },
+      { id: 97, category: "CONTRIBUTION", title: "捐贈二手書籍、衣物或物資給需要的偏鄉或機構" },
+      { id: 98, category: "CONTRIBUTION", title: "幫助一位遇到困難的陌生人或鄰居" },
+      { id: 99, category: "CONTRIBUTION", title: "為環境永續或動物權益做出一個實質的行動改變" },
+      { id: 100, category: "CONTRIBUTION", title: "整理並傳承自己的經驗與智慧，成為能正向影響他人的人" }
     ];
+
+    const STORAGE_KEY = "GOALS_2027_STATE_V2";
+
+    // Safe LocalStorage Wrappers for Preview/iFrame Environments
+    function safeGetStorage(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch (e) {
+        console.warn("LocalStorage read error, using in-memory state:", e);
+        return null;
+      }
+    }
+
+    function safeSetStorage(key, value) {
+      try {
+        localStorage.setItem(key, value);
+      } catch (e) {
+        console.warn("LocalStorage write error:", e);
+      }
+    }
 
     // Global Application State
     let state = {
@@ -493,19 +534,213 @@
       }
     };
 
-    const STORAGE_KEY = "GOALS_2027_STATE_V2";
-
     function loadState() {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = safeGetStorage(STORAGE_KEY);
+      let parsed = null;
       if (saved) {
         try {
-          state = JSON.parse(saved);
+          parsed = JSON.parse(saved);
         } catch(e) {
           console.error("Failed to parse saved state", e);
-          initDefaultState();
+        }
+      }
+
+      if (parsed && Array.isArray(parsed.goals) && parsed.goals.length > 0) {
+        state = parsed;
+        // Ensure all 100 default items exist
+        if (state.goals.length < 100) {
+          const existingIds = new Set(state.goals.map(g => g.id));
+          DEFAULT_GOALS.forEach(dg => {
+            if (!existingIds.has(dg.id)) {
+              state.goals.push({ ...dg, completed: false, completedDate: "", note: "" });
+            }
+          });
+          state.goals.sort((a, b) => a.id - b.id);
         }
       } else {
         initDefaultState();
+      }
+    }
+
+    function initDefaultState() {
+      state.goals = DEFAULT_GOALS.map(g => ({
+        ...g,
+        completed: false,
+        completedDate: "",
+        note: ""
+      }));
+      state.reflections = { achievements: "", learnings: "", letter: "" };
+      saveState();
+    }
+
+    function saveState() {
+      safeSetStorage(STORAGE_KEY, JSON.stringify(state));
+      renderCanvasStats();
+      renderCategoryPills();
+    }
+
+    function setupExportHandlers() {
+      // PDF Export
+      const pdfBtn = document.getElementById('btn-export-pdf');
+      if (pdfBtn) {
+        pdfBtn.addEventListener('click', () => {
+          if (typeof html2pdf === 'undefined') {
+            showToast("PDF 模組載入中，請稍後重試", "error");
+            return;
+          }
+
+          const element = document.getElementById('export-container');
+          
+          // Update PDF info header
+          document.getElementById('pdf-export-date').innerText = new Date().toLocaleDateString('zh-TW');
+          const compCount = state.goals.filter(g => g.completed).length;
+          document.getElementById('pdf-export-progress').innerText = `${compCount} / ${state.goals.length} (${Math.round((compCount/state.goals.length)*100)}%)`;
+
+          const opt = {
+            margin:       0.3,
+            filename:     `2027年100項必做事項與盤點報告_${new Date().toISOString().split('T')[0]}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+          };
+
+          // Reveal notes temporarily for export
+          document.querySelectorAll('[id^="note-container-"]').forEach(el => el.classList.remove('hidden'));
+
+          showToast("正在生成 PDF 報告，請稍候...", "info");
+
+          html2pdf().set(opt).from(element).save().then(() => {
+            renderGoals(); // Restore dynamic UI view
+            showToast("PDF 報告下載完成！", "success");
+          }).catch(err => {
+            console.error(err);
+            showToast("PDF 匯出失敗，請重試", "error");
+          });
+        });
+      }
+
+      // JSON Export
+      const exportBtn = document.getElementById('btn-export-json');
+      if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+          const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+          const downloadAnchor = document.createElement('a');
+          downloadAnchor.setAttribute("href", dataStr);
+          downloadAnchor.setAttribute("download", `2027_Goals_Backup_${new Date().toISOString().split('T')[0]}.json`);
+          document.body.appendChild(downloadAnchor);
+          downloadAnchor.click();
+          downloadAnchor.remove();
+          showToast("JSON 備份檔已開始下載", "success");
+        });
+      }
+
+      // JSON Import
+      const importBtn = document.getElementById('btn-import-json');
+      const importInput = document.getElementById('input-import-file');
+
+      if (importBtn && importInput) {
+        importBtn.addEventListener('click', () => importInput.click());
+
+        importInput.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            try {
+              const importedState = JSON.parse(event.target.result);
+              if (importedState && Array.isArray(importedState.goals)) {
+                state = importedState;
+                saveState();
+                initReflectionFields();
+                renderGoals();
+                showToast("資料備份匯入成功！", "success");
+              } else {
+                showToast("匯入的 JSON 檔案格式不符！", "error");
+              }
+            } catch (err) {
+              showToast("讀取檔案失敗：" + err.message, "error");
+            }
+          };
+          reader.readAsText(file);
+        });
+      }
+    }
+
+    function setupModalAndTheme() {
+      // Custom Goal Modal
+      const modal = document.getElementById("modal-add");
+      const btnAdd = document.getElementById("btn-add-custom");
+      const btnClose = document.getElementById("btn-close-modal");
+      const btnCancel = document.getElementById("btn-cancel-modal");
+      const btnSave = document.getElementById("btn-save-custom");
+
+      const openModal = () => modal.classList.remove("hidden");
+      const closeModal = () => {
+        modal.classList.add("hidden");
+        document.getElementById("modal-title").value = "";
+      };
+
+      if (btnAdd) btnAdd.addEventListener("click", openModal);
+      if (btnClose) btnClose.addEventListener("click", closeModal);
+      if (btnCancel) btnCancel.addEventListener("click", closeModal);
+
+      if (btnSave) {
+        btnSave.addEventListener("click", () => {
+          const title = document.getElementById("modal-title").value.trim();
+          const category = document.getElementById("modal-category").value;
+
+          if (!title) {
+            showToast("請輸入項目名稱！", "error");
+            return;
+          }
+
+          const newId = state.goals.length > 0 ? Math.max(...state.goals.map(g => g.id)) + 1 : 1;
+          state.goals.push({
+            id: newId,
+            category: category,
+            title: title,
+            completed: false,
+            completedDate: "",
+            note: ""
+          });
+
+          saveState();
+          renderGoals();
+          closeModal();
+          showToast("自訂目標項目已成功新增！", "success");
+        });
+      }
+
+      // Reset Modal Logic
+      const resetBtn = document.getElementById("btn-reset-goals");
+      const resetModal = document.getElementById("modal-reset-confirm");
+      const cancelResetBtn = document.getElementById("btn-cancel-reset");
+      const confirmResetBtn = document.getElementById("btn-confirm-reset");
+
+      if (resetBtn && resetModal) {
+        resetBtn.addEventListener("click", () => resetModal.classList.remove("hidden"));
+      }
+      if (cancelResetBtn && resetModal) {
+        cancelResetBtn.addEventListener("click", () => resetModal.classList.add("hidden"));
+      }
+      if (confirmResetBtn && resetModal) {
+        confirmResetBtn.addEventListener("click", () => {
+          resetModal.classList.add("hidden");
+          initDefaultState();
+          initReflectionFields();
+          renderGoals();
+          showToast("已成功自動建立並重置 100 項必做事項！", "success");
+        });
+      }
+
+      // Dark Mode Toggle
+      const themeBtn = document.getElementById("theme-toggle");
+      if (themeBtn) {
+        themeBtn.addEventListener("click", () => {
+          document.documentElement.classList.toggle("dark");
+          renderCanvasStats();
+        });
       }
     }
 
@@ -806,90 +1041,15 @@
       animate();
     }
 
-    function setupExportHandlers() {
-      // PDF Export
-      document.getElementById('btn-export-pdf').addEventListener('click', () => {
-        const element = document.getElementById('export-container');
-        
-        // Update PDF info header
-        document.getElementById('pdf-export-date').innerText = new Date().toLocaleDateString('zh-TW');
-        const compCount = state.goals.filter(g => g.completed).length;
-        document.getElementById('pdf-export-progress').innerText = `${compCount} / ${state.goals.length} (${Math.round((compCount/state.goals.length)*100)}%)`;
-
-        const opt = {
-          margin:       0.3,
-          filename:     `2027年100項必做事項與盤點報告_${new Date().toISOString().split('T')[0]}.pdf`,
-          image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 2, useCORS: true },
-          jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-        };
-
-        // Reveal notes temporarily for export
-        document.querySelectorAll('[id^="note-container-"]').forEach(el => el.classList.remove('hidden'));
-
-        showToast("正在生成 PDF 報告，請稍候...", "info");
-
-        html2pdf().set(opt).from(element).save().then(() => {
-          renderGoals(); // Restore dynamic UI view
-          showToast("PDF 報告下載完成！", "success");
-        }).catch(err => {
-          console.error(err);
-          showToast("PDF 匯出失敗，請重試", "error");
-        });
-      });
-
-      // JSON Export
-      document.getElementById('btn-export-json').addEventListener('click', () => {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
-        const downloadAnchor = document.createElement('a');
-        downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `2027_Goals_Backup_${new Date().toISOString().split('T')[0]}.json`);
-        document.body.appendChild(downloadAnchor);
-        downloadAnchor.click();
-        downloadAnchor.remove();
-        showToast("JSON 備份檔已開始下載", "success");
-      });
-
-      // JSON Import
-      const importBtn = document.getElementById('btn-import-json');
-      const importInput = document.getElementById('input-import-file');
-
-      importBtn.addEventListener('click', () => importInput.click());
-
-      importInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          try {
-            const importedState = JSON.parse(event.target.result);
-            if (importedState && Array.isArray(importedState.goals)) {
-              state = importedState;
-              saveState();
-              initReflectionFields();
-              renderGoals();
-              showToast("資料備份匯入成功！", "success");
-            } else {
-              showToast("匯入的 JSON 檔案格式不不符！", "error");
-            }
-          } catch (err) {
-            showToast("讀取檔案失敗：" + err.message, "error");
-          }
-        };
-        reader.readAsText(file);
-      });
-    }
-
     function initReflectionFields() {
       const ach = document.getElementById('reflection-achievements');
       const lea = document.getElementById('reflection-learnings');
-      const let = document.getElementById('reflection-letter');
+      const letterEl = document.getElementById('reflection-letter');
 
       if (state.reflections) {
         ach.value = state.reflections.achievements || "";
         lea.value = state.reflections.learnings || "";
-        let.value = state.reflections.letter || "";
+        letterEl.value = state.reflections.letter || "";
       }
 
       ach.addEventListener('input', (e) => {
@@ -900,7 +1060,7 @@
         state.reflections.learnings = e.target.value;
         saveState();
       });
-      let.addEventListener('input', (e) => {
+      letterEl.addEventListener('input', (e) => {
         state.reflections.letter = e.target.value;
         saveState();
       });
@@ -922,57 +1082,6 @@
         opt2.value = key;
         opt2.textContent = `${cat.name}`;
         modalCat.appendChild(opt2);
-      });
-    }
-
-    function setupModalAndTheme() {
-      // Custom Goal Modal
-      const modal = document.getElementById("modal-add");
-      const btnAdd = document.getElementById("btn-add-custom");
-      const btnClose = document.getElementById("btn-close-modal");
-      const btnCancel = document.getElementById("btn-cancel-modal");
-      const btnSave = document.getElementById("btn-save-custom");
-
-      const openModal = () => modal.classList.remove("hidden");
-      const closeModal = () => {
-        modal.classList.add("hidden");
-        document.getElementById("modal-title").value = "";
-      };
-
-      btnAdd.addEventListener("click", openModal);
-      btnClose.addEventListener("click", closeModal);
-      btnCancel.addEventListener("click", closeModal);
-
-      btnSave.addEventListener("click", () => {
-        const title = document.getElementById("modal-title").value.trim();
-        const category = document.getElementById("modal-category").value;
-
-        if (!title) {
-          showToast("請輸入項目名稱！", "error");
-          return;
-        }
-
-        const newId = state.goals.length > 0 ? Math.max(...state.goals.map(g => g.id)) + 1 : 1;
-        state.goals.push({
-          id: newId,
-          category: category,
-          title: title,
-          completed: false,
-          completedDate: "",
-          note: ""
-        });
-
-        saveState();
-        renderGoals();
-        closeModal();
-        showToast("自訂目標項目已成功新增！", "success");
-      });
-
-      // Dark Mode Toggle
-      const themeBtn = document.getElementById("theme-toggle");
-      themeBtn.addEventListener("click", () => {
-        document.documentElement.classList.toggle("dark");
-        renderCanvasStats();
       });
     }
 
