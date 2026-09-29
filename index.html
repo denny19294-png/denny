@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>邁向 2027：100 項人生必做清單與年度盤點</title>
   
+  <!-- Inline SVG Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
+
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   
@@ -17,7 +20,7 @@
   <!-- Google Fonts (Noto Sans TC & Inter) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 
   <script>
     tailwind.config = {
@@ -97,7 +100,6 @@
   <!-- Confetti Canvas -->
   <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
 
-  <!-- Navigation Header -->
   <header class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30 no-print">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
@@ -140,7 +142,6 @@
     </div>
   </header>
 
-  <!-- Main Container -->
   <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8" id="export-container">
     
     <!-- Printable Header Banner (Only visible in PDF export) -->
@@ -199,7 +200,6 @@
       </div>
     </section>
 
-    <!-- Toolbar: Search, Filters & Action -->
     <section class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-200/80 dark:border-slate-700/80 space-y-4 no-print">
       <div class="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
         
@@ -345,7 +345,6 @@
     </div>
   </footer>
 
-  <!-- JavaScript Application Logic -->
   <script>
     
     // 10 categories with color themes and FontAwesome icons
@@ -362,7 +361,6 @@
       "MILESTONE": { name: "重大里程碑夢想", icon: "fa-flag-checkered", color: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800" }
     };
 
-    // Pre-populated 100 comprehensive initial items list across 10 domains
     const DEFAULT_GOALS = [
       // 1. 個人學習與成長 (1-10)
       { id: 1, category: "GROWTH", title: "每年閱讀至少 12 本非虛構好書並寫下心得" },
@@ -729,7 +727,7 @@
               dateInput.value = today;
             }
             triggerConfetti();
-            showToast(`恭喜達成目標 #${goal.id}！??`, "success");
+            showToast(`恭喜達成目標 #${goal.id}！🎉`, "success");
           }
           saveState();
           renderGoals();
