@@ -74,6 +74,9 @@
         background: white !important;
         color: black !important;
       }
+      section {
+        break-inside: avoid;
+      }
     }
     
     .print-only {
@@ -143,6 +146,12 @@
         <button id="btn-export-pdf" class="px-3.5 py-2 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white font-medium rounded-xl text-sm shadow-md transition flex items-center space-x-1.5">
           <i class="fa-solid fa-file-pdf"></i>
           <span>下載 PDF 報告</span>
+        </button>
+
+        <!-- Native Print / Save to PDF -->
+        <button id="btn-print-native" class="px-3 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium rounded-xl text-sm transition flex items-center space-x-1.5" title="使用系統內建列印另存 PDF">
+          <i class="fa-solid fa-print"></i>
+          <span class="hidden lg:inline">原生列印</span>
         </button>
       </div>
     </div>
@@ -481,141 +490,187 @@
 
       // 心靈靈性 (81-90)
       { id: 81, category: "MINDFULNESS", title: "養成每日正念冥想 10 分鐘的習慣（持續 60 天以上）" },
-      { id: 82, category: "MINDFULNESS", title: "撰寫每日感恩日記，記錄每天 3 件好事" },
-      { id: 83, category: "MINDFULNESS", title: "進行一次靜心禪修、瑜珈營或音療洗禮體驗" },
-      { id: 84, category: "MINDFULNESS", title: "學會接納自己的不完美與焦慮，練習自我關懷" },
-      { id: 85, category: "MINDFULNESS", title: "完成一次人生價值觀盤點，釐清核心優先順序" },
-      { id: 86, category: "MINDFULNESS", title: "在面對重大壓力時，建立一套有效復原與紓壓機制" },
-      { id: 87, category: "MINDFULNESS", title: "清理數位生活（清理相簿、刪除無用 App、整理信箱）" },
-      { id: 88, category: "MINDFULNESS", title: "嘗試連續一週完全不發布任何社群媒體動態" },
-      { id: 89, category: "MINDFULNESS", title: "與自我對話，寫下一封給 10 年後自己的信" },
-      { id: 90, category: "MINDFULNESS", title: "建立一個平靜放鬆的睡前儀式（Night Routine）" },
+      { id: 82, category: "MINDFULNESS", title: "參加一次靜心營或數日默觀/瑜珈退修體驗" },
+      { id: 83, category: "MINDFULNESS", title: "建立每日感恩日記習慣，記錄 3 件值得感恩的小事" },
+      { id: 84, category: "MINDFULNESS", title: "閱讀 3 本心靈成長或哲學經典名著" },
+      { id: 85, category: "MINDFULNESS", title: "學會覺察情緒並建立正向情緒調節與紓壓機制" },
+      { id: 86, category: "MINDFULNESS", title: "完成一次個人年度價值觀排序與人生願景梳理" },
+      { id: 87, category: "MINDFULNESS", title: "嘗試在自然大自然中獨處半天，聆聽內心聲音" },
+      { id: 88, category: "MINDFULNESS", title: "學習原諒與釋懷過往的不完美，達成自我和解" },
+      { id: 89, category: "MINDFULNESS", title: "維持專注當下的生活心態，減少無謂焦慮" },
+      { id: 90, category: "MINDFULNESS", title: "建立一個隨時能讓自己靜心沉澱的小儀式" },
 
       // 社會奉獻 (91-100)
-      { id: 91, category: "CONTRIBUTION", title: "定期捐款給信任的公益團體或社會倡議組織" },
-      { id: 92, category: "CONTRIBUTION", title: "參與一次志工服務活動（如淨灘、動物照顧、社區服務）" },
-      { id: 93, category: "CONTRIBUTION", title: "進行一次定期捐血或器官/骨髓捐贈登記" },
-      { id: 94, category: "CONTRIBUTION", title: "無私分享自己的專業知識，輔導一位後進新人" },
-      { id: 95, category: "CONTRIBUTION", title: "在日常生活中實踐減塑、環保與低碳生活習慣" },
-      { id: 96, category: "CONTRIBUTION", title: "發起或響應一次群眾募資或公益倡議計畫" },
-      { id: 97, category: "CONTRIBUTION", title: "捐贈二手書籍、衣物或物資給需要的偏鄉或機構" },
-      { id: 98, category: "CONTRIBUTION", title: "幫助一位遇到困難的陌生人或鄰居" },
-      { id: 99, category: "CONTRIBUTION", title: "為環境永續或動物權益做出一個實質的行動改變" },
-      { id: 100, category: "CONTRIBUTION", title: "整理並傳承自己的經驗與智慧，成為能正向影響他人的人" }
+      { id: 91, category: "CONTRIBUTION", title: "參與一次志工服務或公益慈善團體志工活動" },
+      { id: 92, category: "CONTRIBUTION", title: "定期捐款或捐贈物資給需要的公益機構/弱勢團體" },
+      { id: 93, category: "CONTRIBUTION", title: "捐血 2 次以上或完成器官/骨髓捐贈意願登記" },
+      { id: 94, category: "CONTRIBUTION", title: "無償分享自己的專業知識或技能給需要的群眾" },
+      { id: 95, category: "CONTRIBUTION", title: "落實減塑與環保生活，減少個人碳足跡" },
+      { id: 96, category: "CONTRIBUTION", title: "幫助身邊一位朋友或後輩達成他心中的小目標" },
+      { id: 97, category: "CONTRIBUTION", title: "支持在地小農、獨立書店或本土文創品牌" },
+      { id: 98, category: "CONTRIBUTION", title: "發起或參與一次淨灘/淨山環保行動" },
+      { id: 99, category: "CONTRIBUTION", title: "照顧浪浪或支持動物保護團體專案" },
+      { id: 100, category: "CONTRIBUTION", title: "傳播正能量，成為讓身邊世界變得稍微更好一點的人" }
     ];
 
-    const STORAGE_KEY = "GOALS_2027_STATE_V2";
-
-    // Safe LocalStorage Wrappers for Preview/iFrame Environments
-    function safeGetStorage(key) {
-      try {
-        return localStorage.getItem(key);
-      } catch (e) {
-        console.warn("LocalStorage read error, using in-memory state:", e);
-        return null;
-      }
-    }
-
-    function safeSetStorage(key, value) {
-      try {
-        localStorage.setItem(key, value);
-      } catch (e) {
-        console.warn("LocalStorage write error:", e);
-      }
-    }
-
-    // Global Application State
+    const STORAGE_KEY = '2027_goals_app_state_v1';
     let state = {
       goals: [],
-      reflections: {
-        achievements: "",
-        learnings: "",
-        letter: ""
-      }
+      reflections: { achievements: "", learnings: "", letter: "" }
     };
 
     function loadState() {
-      const saved = safeGetStorage(STORAGE_KEY);
-      let parsed = null;
+      const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         try {
-          parsed = JSON.parse(saved);
-        } catch(e) {
+          state = JSON.parse(saved);
+          if (!state.goals || state.goals.length === 0) {
+            initDefaultState();
+          }
+        } catch (e) {
           console.error("Failed to parse saved state", e);
-        }
-      }
-
-      if (parsed && Array.isArray(parsed.goals) && parsed.goals.length > 0) {
-        state = parsed;
-        // Ensure all 100 default items exist
-        if (state.goals.length < 100) {
-          const existingIds = new Set(state.goals.map(g => g.id));
-          DEFAULT_GOALS.forEach(dg => {
-            if (!existingIds.has(dg.id)) {
-              state.goals.push({ ...dg, completed: false, completedDate: "", note: "" });
-            }
-          });
-          state.goals.sort((a, b) => a.id - b.id);
+          initDefaultState();
         }
       } else {
         initDefaultState();
       }
     }
 
-    function initDefaultState() {
-      state.goals = DEFAULT_GOALS.map(g => ({
-        ...g,
-        completed: false,
-        completedDate: "",
-        note: ""
-      }));
-      state.reflections = { achievements: "", learnings: "", letter: "" };
-      saveState();
-    }
+    function prepareDOMForExport() {
+      // Update PDF info header date & stats
+      const dateEl = document.getElementById('pdf-export-date');
+      if (dateEl) dateEl.innerText = new Date().toLocaleDateString('zh-TW');
+      
+      const compCount = state.goals.filter(g => g.completed).length;
+      const progressEl = document.getElementById('pdf-export-progress');
+      if (progressEl) progressEl.innerText = `${compCount} / ${state.goals.length} (${Math.round((compCount/state.goals.length)*100)}%)`;
 
-    function saveState() {
-      safeSetStorage(STORAGE_KEY, JSON.stringify(state));
-      renderCanvasStats();
-      renderCategoryPills();
+      // 1. Temporarily reveal goal notes that have content
+      state.goals.forEach(goal => {
+        const noteContainer = document.getElementById(`note-container-${goal.id}`);
+        if (noteContainer && goal.note && goal.note.trim() !== '') {
+          noteContainer.classList.remove('hidden');
+        }
+      });
+
+      // 2. Convert html5 canvas to img so html2canvas renders it reliably
+      const canvas = document.getElementById('progress-canvas');
+      let imgReplacement = null;
+      if (canvas) {
+        try {
+          const dataUrl = canvas.toDataURL('image/png');
+          imgReplacement = document.createElement('img');
+          imgReplacement.src = dataUrl;
+          imgReplacement.className = canvas.className;
+          imgReplacement.id = 'temp-canvas-img';
+          canvas.parentNode.insertBefore(imgReplacement, canvas);
+          canvas.classList.add('hidden');
+        } catch(e) {
+          console.warn("Canvas dataURL conversion error:", e);
+        }
+      }
+
+      // 3. Convert textareas into visible styled divs for html2canvas capture
+      const textareas = document.querySelectorAll('textarea');
+      const tempDivs = [];
+      textareas.forEach(ta => {
+        const val = ta.value;
+        const div = document.createElement('div');
+        div.className = ta.className + ' print-temp-textarea';
+        div.style.whiteSpace = 'pre-wrap';
+        div.style.minHeight = ta.offsetHeight + 'px';
+        div.innerText = val || ta.placeholder || '';
+        if (!val) div.style.opacity = '0.5';
+        
+        ta.parentNode.insertBefore(div, ta);
+        ta.classList.add('hidden');
+        tempDivs.push({ ta, div });
+      });
+
+      // 4. Force light theme class on document temporarily if in dark mode for clear PDF output
+      const isDark = document.documentElement.classList.contains('dark');
+      if (isDark) {
+        document.documentElement.classList.remove('dark');
+      }
+
+      // Return cleanup callback to restore original DOM state
+      return function cleanup() {
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+        }
+
+        if (canvas && imgReplacement) {
+          canvas.classList.remove('hidden');
+          imgReplacement.remove();
+        }
+
+        tempDivs.forEach(({ ta, div }) => {
+          ta.classList.remove('hidden');
+          div.remove();
+        });
+
+        renderGoals(); // Restore dynamic goal notes state
+      };
     }
 
     function setupExportHandlers() {
-      // PDF Export
+      // Native Print Handler
+      const printNativeBtn = document.getElementById('btn-print-native');
+      if (printNativeBtn) {
+        printNativeBtn.addEventListener('click', () => {
+          const cleanupExport = prepareDOMForExport();
+          window.print();
+          cleanupExport();
+        });
+      }
+
+      // PDF Export via html2pdf
       const pdfBtn = document.getElementById('btn-export-pdf');
       if (pdfBtn) {
-        pdfBtn.addEventListener('click', () => {
+        pdfBtn.addEventListener('click', async () => {
           if (typeof html2pdf === 'undefined') {
             showToast("PDF 模組載入中，請稍後重試", "error");
             return;
           }
 
+          showToast("正在準備 PDF 內容與排版...", "info");
+
+          // Save current scroll position & reset to top to avoid html2canvas offset bug
+          const currentScrollY = window.scrollY;
+          window.scrollTo(0, 0);
+
+          // Prepare elements for html2canvas
+          const cleanupExport = prepareDOMForExport();
           const element = document.getElementById('export-container');
-          
-          // Update PDF info header
-          document.getElementById('pdf-export-date').innerText = new Date().toLocaleDateString('zh-TW');
-          const compCount = state.goals.filter(g => g.completed).length;
-          document.getElementById('pdf-export-progress').innerText = `${compCount} / ${state.goals.length} (${Math.round((compCount/state.goals.length)*100)}%)`;
 
           const opt = {
-            margin:       0.3,
+            margin:       [0.3, 0.3, 0.4, 0.3],
             filename:     `2027年100項必做事項與盤點報告_${new Date().toISOString().split('T')[0]}.pdf`,
             image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true },
-            jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+            html2canvas:  { 
+              scale: 2, 
+              useCORS: true, 
+              logging: false,
+              scrollY: 0,
+              scrollX: 0,
+              windowScrollY: 0,
+              backgroundColor: '#ffffff'
+            },
+            jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+            pagebreak:    { mode: ['css', 'legacy'] }
           };
 
-          // Reveal notes temporarily for export
-          document.querySelectorAll('[id^="note-container-"]').forEach(el => el.classList.remove('hidden'));
-
-          showToast("正在生成 PDF 報告，請稍候...", "info");
-
-          html2pdf().set(opt).from(element).save().then(() => {
-            renderGoals(); // Restore dynamic UI view
+          try {
+            await html2pdf().set(opt).from(element).save();
             showToast("PDF 報告下載完成！", "success");
-          }).catch(err => {
-            console.error(err);
-            showToast("PDF 匯出失敗，請重試", "error");
-          });
+          } catch (err) {
+            console.error("PDF Export Error:", err);
+            showToast("PDF 匯出失敗，建議點選「原生列印」另存為 PDF", "error");
+          } finally {
+            // Restore original DOM state and scroll position
+            cleanupExport();
+            window.scrollTo(0, currentScrollY);
+          }
         });
       }
 
