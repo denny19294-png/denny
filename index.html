@@ -100,6 +100,44 @@
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, onSnapshot, query, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+    // 定義切換登入/註冊/忘記密碼視窗 (全域可用)
+    window.showAuthView = (view) => {
+      const loginForm = document.getElementById('form-login');
+      const regForm = document.getElementById('form-register');
+      const forgotForm = document.getElementById('form-forgot');
+      const title = document.getElementById('auth-title');
+      const subtitle = document.getElementById('auth-subtitle');
+
+      if (!loginForm || !regForm || !forgotForm) return;
+
+      loginForm.classList.add('hidden');
+      regForm.classList.add('hidden');
+      forgotForm.classList.add('hidden');
+      
+      if (view === 'login') {
+        loginForm.classList.remove('hidden');
+        if (title) title.innerText = '登入你的願景帳號';
+        if (subtitle) subtitle.innerText = '歡迎回來，繼續你的百項修煉';
+      } else if (view === 'register') {
+        regForm.classList.remove('hidden');
+        if (title) title.innerText = '建立專屬帳號';
+        if (subtitle) subtitle.innerText = '獨立雲端空間，多裝置自動同步';
+      } else if (view === 'forgot') {
+        forgotForm.classList.remove('hidden');
+        if (title) title.innerText = '重設密碼';
+        if (subtitle) subtitle.innerText = '請輸入信箱，我們將寄送重設連結';
+      }
+    };
+
+    window.continueAsGuest = () => {
+      document.getElementById('auth-overlay').classList.add('hidden');
+      const nameSpan = document.getElementById('user-display-name');
+      if (nameSpan) nameSpan.innerText = '👋 訪客';
+      updateSyncBadge("local");
+      window.initAppLogic();
+      if (window.showToast) window.showToast("已進入訪客體驗模式 (本機儲存)", "info");
+    };
+
     // Global variable helpers
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'life-goals-app-2028';
     const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
@@ -133,20 +171,19 @@
     }
 
     async function initAuth() {
+      setupAuthUIHandlers();
+
       if (!window.FirebaseAppInstance.isCloudAvailable) {
         updateSyncBadge("local");
         window.initAppLogic();
         return;
       }
 
-      setupAuthUIHandlers();
-
       onAuthStateChanged(auth, async (user) => {
         if (user) {
           currentUser = user;
           window.FirebaseAppInstance.userUid = user.uid;
           
-          // 顯示用戶名稱 (若無設定則取信箱前綴)
           const displayName = user.displayName || (user.email ? user.email.split('@')[0] : "訪客");
           const nameSpan = document.getElementById('user-display-name');
           if (nameSpan) nameSpan.innerText = `👋 ${displayName}`;
@@ -155,7 +192,6 @@
           document.getElementById('auth-overlay').classList.add('hidden');
           setupCloudDataSync(user.uid);
         } else {
-          // 沒有登入狀態，強制顯示登入遮罩
           if (customAuthToken) {
             try {
               await signInWithCustomToken(auth, customAuthToken);
@@ -171,81 +207,144 @@
     }
 
     function setupAuthUIHandlers() {
-      // 切換登入/註冊/忘記密碼視窗
-      window.showAuthView = (view) => {
-        document.getElementById('form-login').classList.add('hidden');
-        document.getElementById('form-register').classList.add('hidden');
-        document.getElementById('form-forgot').classList.add('hidden');
-        
-        const title = document.getElementById('auth-title');
-        const subtitle = document.getElementById('auth-subtitle');
-        
-        if (view === 'login') {
-          document.getElementById('form-login').classList.remove('hidden');
-          title.innerText = '登入你的願景帳號';
-          subtitle.innerText = '歡迎回來，繼續你的百項修煉';
-        } else if (view === 'register') {
-          document.getElementById('form-register').classList.remove('hidden');
-          title.innerText = '建立專屬帳號';
-          subtitle.innerText = '獨立雲端空間，多裝置自動同步';
-        } else if (view === 'forgot') {
-          document.getElementById('form-forgot').classList.remove('hidden');
-          title.innerText = '重設密碼';
-          subtitle.innerText = '請輸入信箱，我們將寄送重設連結';
-        }
-      };
-
       // 登入事件
-      document.getElementById('form-login').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const pwd = document.getElementById('login-password').value;
-        try {
-          await signInWithEmailAndPassword(auth, email, pwd);
-          if (window.showToast) window.showToast("登入成功！", "success");
-        } catch(err) {
-          if (window.showToast) window.showToast("登入失敗，請檢查信箱與密碼。", "error");
-        }
-      });
+      const formLogin = document.getElementById('form-login');
+      if (formLogin && !formLogin.dataset.bound) {
+        formLogin.dataset.bound = "true";
+        formLogin.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const submitBtn = document.getElementById('btn-login-submit');
+          const email = document.getElementById('login-email').value.trim();
+          const pwd = document.getElementById('login-password').value;
+
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> <span>登入中...</span>';
+          }
+
+          try {
+            if (!auth || !window.FirebaseAppInstance.isCloudAvailable) {
+              throw new Error("Cloud auth unavailable");
+            }
+            await signInWithEmailAndPassword(auth, email, pwd);
+            if (window.showToast) window.showToast("登入成功！", "success");
+          } catch(err) {
+            console.error("Login error:", err);
+            let msg = "登入失敗，請檢查信箱與密碼。";
+            if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+              msg = "帳號或密碼錯誤，請重新確認。";
+            } else if (err.code === 'auth/invalid-email') {
+              msg = "電子信箱格式不正確。";
+            } else if (err.message === "Cloud auth unavailable" || (err.code && err.code.includes('api-key'))) {
+              msg = "雲端登入服務未連線，為您切換至訪客模式！";
+              window.continueAsGuest();
+              return;
+            }
+            if (window.showToast) window.showToast(msg, "error");
+          } finally {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = '<span>登入</span>';
+            }
+          }
+        });
+      }
 
       // 註冊事件
-      document.getElementById('form-register').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const name = document.getElementById('register-name').value;
-        const email = document.getElementById('register-email').value;
-        const pwd = document.getElementById('register-password').value;
-        try {
-          const userCredential = await createUserWithEmailAndPassword(auth, email, pwd);
-          await updateProfile(userCredential.user, { displayName: name });
-          if (window.showToast) window.showToast("帳號建立成功，已為您自動登入！", "success");
-        } catch(err) {
-          if (window.showToast) window.showToast("註冊失敗：" + err.message, "error");
-        }
-      });
+      const formRegister = document.getElementById('form-register');
+      if (formRegister && !formRegister.dataset.bound) {
+        formRegister.dataset.bound = "true";
+        formRegister.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const submitBtn = document.getElementById('btn-register-submit');
+          const name = document.getElementById('register-name').value.trim();
+          const email = document.getElementById('register-email').value.trim();
+          const pwd = document.getElementById('register-password').value;
+
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> <span>建立帳號中...</span>';
+          }
+
+          try {
+            if (!auth || !window.FirebaseAppInstance.isCloudAvailable) {
+              throw new Error("Cloud auth unavailable");
+            }
+            const userCredential = await createUserWithEmailAndPassword(auth, email, pwd);
+            if (name && userCredential.user) {
+              await updateProfile(userCredential.user, { displayName: name });
+            }
+            if (window.showToast) window.showToast("帳號建立成功，已為您自動登入！", "success");
+          } catch(err) {
+            console.error("Register error:", err);
+            let msg = "註冊失敗：" + (err.message || "請重試");
+            if (err.code === 'auth/email-already-in-use') {
+              msg = "此電子信箱已被註冊，請直接登入。";
+            } else if (err.code === 'auth/invalid-email') {
+              msg = "電子信箱格式不正確。";
+            } else if (err.code === 'auth/weak-password') {
+              msg = "密碼太弱，請至少輸入 6 個字元。";
+            } else if (err.message === "Cloud auth unavailable" || (err.code && err.code.includes('api-key'))) {
+              msg = "雲端註冊服務未連線，為您切換至訪客模式！";
+              window.continueAsGuest();
+              return;
+            }
+            if (window.showToast) window.showToast(msg, "error");
+          } finally {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = '<span>建立帳號</span>';
+            }
+          }
+        });
+      }
 
       // 忘記密碼事件
-      document.getElementById('form-forgot').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('forgot-email').value;
-        try {
-          await sendPasswordResetEmail(auth, email);
-          if (window.showToast) window.showToast("密碼重設信件已寄出，請檢查信箱。", "success");
-          window.showAuthView('login');
-        } catch(err) {
-          if (window.showToast) window.showToast("發送失敗：" + err.message, "error");
-        }
-      });
+      const formForgot = document.getElementById('form-forgot');
+      if (formForgot && !formForgot.dataset.bound) {
+        formForgot.dataset.bound = "true";
+        formForgot.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const submitBtn = document.getElementById('btn-forgot-submit');
+          const email = document.getElementById('forgot-email').value.trim();
+
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> <span>發送中...</span>';
+          }
+
+          try {
+            if (!auth || !window.FirebaseAppInstance.isCloudAvailable) {
+              throw new Error("Cloud auth unavailable");
+            }
+            await sendPasswordResetEmail(auth, email);
+            if (window.showToast) window.showToast("密碼重設信件已寄出，請檢查信箱。", "success");
+            window.showAuthView('login');
+          } catch(err) {
+            let msg = "發送失敗，請確認信箱是否正確。";
+            if (window.showToast) window.showToast(msg, "error");
+          } finally {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = '<span>發送重設信件</span>';
+            }
+          }
+        });
+      }
       
       // 登出按鈕事件
       const btnLogout = document.getElementById('btn-logout');
-      if (btnLogout) {
+      if (btnLogout && !btnLogout.dataset.bound) {
+        btnLogout.dataset.bound = "true";
         btnLogout.addEventListener('click', async () => {
           try {
-            await signOut(auth);
-            // 清除本機暫存並顯示登入視窗
+            if (auth && currentUser) {
+              await signOut(auth);
+            }
             window.appData = { activePlanId: null, plans: [] };
             document.getElementById('goals-container').innerHTML = '';
             document.getElementById('user-display-name').innerText = '';
+            document.getElementById('auth-overlay').classList.remove('hidden');
             if (window.showToast) window.showToast("已成功登出", "info");
           } catch(err) {
             console.error("Logout error", err);
@@ -347,7 +446,9 @@
           <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">密碼</label>
           <input type="password" id="login-password" required class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-800 dark:text-white">
         </div>
-        <button type="submit" class="w-full py-3 mt-2 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-md transition">登入</button>
+        <button type="submit" id="btn-login-submit" class="w-full py-3 mt-2 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+          <span>登入</span>
+        </button>
         <div class="flex justify-between text-xs mt-4">
           <button type="button" onclick="window.showAuthView('forgot')" class="text-sky-600 hover:text-sky-700 dark:text-sky-400">忘記密碼？</button>
           <button type="button" onclick="window.showAuthView('register')" class="text-slate-500 hover:text-slate-700 dark:text-slate-400">沒有帳號？註冊一個</button>
@@ -368,7 +469,9 @@
           <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">密碼 (至少6碼)</label>
           <input type="password" id="register-password" required minlength="6" class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-800 dark:text-white">
         </div>
-        <button type="submit" class="w-full py-3 mt-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold rounded-xl shadow-md transition">建立帳號</button>
+        <button type="submit" id="btn-register-submit" class="w-full py-3 mt-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+          <span>建立帳號</span>
+        </button>
         <div class="text-center text-xs mt-4">
           <button type="button" onclick="window.showAuthView('login')" class="text-slate-500 hover:text-slate-700 dark:text-slate-400">已有帳號？返回登入</button>
         </div>
@@ -381,11 +484,21 @@
           <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">電子信箱</label>
           <input type="email" id="forgot-email" required class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-800 dark:text-white">
         </div>
-        <button type="submit" class="w-full py-3 mt-2 bg-slate-700 hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500 text-white font-semibold rounded-xl shadow-md transition">發送重設信件</button>
+        <button type="submit" id="btn-forgot-submit" class="w-full py-3 mt-2 bg-slate-700 hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500 text-white font-semibold rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+          <span>發送重設信件</span>
+        </button>
         <div class="text-center text-xs mt-4">
           <button type="button" onclick="window.showAuthView('login')" class="text-slate-500 hover:text-slate-700 dark:text-slate-400">返回登入</button>
         </div>
       </form>
+
+      <!-- Guest / Offline Entry Option -->
+      <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700/60 text-center">
+        <button type="button" onclick="window.continueAsGuest()" class="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 underline decoration-dotted underline-offset-4 flex items-center justify-center space-x-1 mx-auto transition">
+          <i class="fa-solid fa-user-check"></i>
+          <span>先不登入，以訪客身份直接體驗 (本機紀錄)</span>
+        </button>
+      </div>
     </div>
   </div>
 
