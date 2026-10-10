@@ -3,103 +3,146 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>人生必做 100 件事 - 跨裝置雲端同步版</title>
+  <title>願景與 100 項人生必做清單 - 雲端同步版</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #0b0f19; color: #f8fafc; }
+  </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
 
   <!-- 登入 / 註冊遮罩層 (未登入時顯示) -->
-  <div id="authOverlay" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative overflow-hidden">
+  <div id="authOverlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl max-w-md w-full p-8 relative overflow-hidden">
       
       <!-- 標題區 -->
-      <div class="text-center mb-6">
-        <div class="w-16 h-16 bg-indigo-600 rounded-2xl mx-auto flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-indigo-200 mb-3">100</div>
-        <h2 id="authTitle" class="text-2xl font-bold text-slate-900">歡迎回來</h2>
-        <p class="text-sm text-slate-500 mt-1">獨立雲端空間，多裝置自動同步</p>
+      <div class="text-center mb-8">
+        <div class="w-16 h-16 bg-indigo-600 rounded-2xl mx-auto flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-indigo-500/30 mb-3">100</div>
+        <h2 id="authTitle" class="text-2xl font-bold text-white">歡迎回來</h2>
+        <p class="text-sm text-slate-400 mt-1">登入以跨裝置同步您的 100 項人生願景與進度</p>
       </div>
 
       <!-- 登入表單 -->
       <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-4">
         <div id="nameFieldContainer" class="hidden">
-          <label class="block text-xs font-semibold text-slate-600 mb-1">顯示名稱 (姓名/暱稱)</label>
-          <input type="text" id="regName" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" placeholder="例如：志鵬">
+          <label class="block text-xs font-semibold text-slate-400 mb-1">顯示名稱 (姓名/暱稱)</label>
+          <input type="text" id="regName" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" placeholder="例如：志鵬">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">電子信箱</label>
-          <input type="email" id="authEmail" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" placeholder="yourname@example.com">
+          <label class="block text-xs font-semibold text-slate-400 mb-1">電子信箱</label>
+          <input type="email" id="authEmail" required class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" placeholder="yourname@example.com">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">密碼 (至少 6 碼)</label>
-          <input type="password" id="authPassword" required minlength="6" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" placeholder="••••••••">
+          <label class="block text-xs font-semibold text-slate-400 mb-1">密碼 (至少 6 碼)</label>
+          <input type="password" id="authPassword" required minlength="6" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" placeholder="••••••••">
         </div>
 
         <div class="flex items-center justify-between text-xs">
-          <button type="button" onclick="toggleForgotPassword()" class="text-indigo-600 hover:underline">忘記密碼？</button>
+          <button type="button" onclick="toggleForgotPassword()" class="text-indigo-400 hover:underline">忘記密碼？</button>
         </div>
 
-        <button type="submit" id="authSubmitBtn" class="w-full py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-100">
+        <button type="submit" id="authSubmitBtn" class="w-full py-3.5 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/30">
           登入系統
         </button>
       </form>
 
       <!-- 切換按鈕 -->
-      <div class="text-center mt-6 text-xs text-slate-500">
+      <div class="text-center mt-6 text-xs text-slate-400">
         <span id="authToggleText">還沒有帳號？</span>
-        <button type="button" onclick="toggleAuthMode()" id="authToggleBtn" class="text-indigo-600 font-semibold hover:underline ml-1">立即註冊</button>
+        <button type="button" onclick="toggleAuthMode()" id="authToggleBtn" class="text-indigo-400 font-semibold hover:underline ml-1">立即註冊</button>
       </div>
     </div>
   </div>
 
-  <!-- 主導覽列 -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+  <!-- 頂部導覽列 -->
+  <header class="bg-slate-900/80 backdrop-blur border-b border-slate-800 sticky top-0 z-30">
     <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold">100</div>
-        <h1 class="text-lg font-bold text-slate-900">人生必做清單</h1>
+        <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md shadow-indigo-600/30">🎯</div>
+        <h1 class="text-base sm:text-lg font-bold text-white tracking-wide">願景與 100 項人生必做清單</h1>
       </div>
-      <div class="flex items-center space-x-4">
-        <span id="userDisplayName" class="text-sm font-medium text-slate-600">載入中...</span>
-        <button onclick="handleLogout()" class="text-xs px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-100 transition text-slate-600">登出</button>
+      
+      <div class="flex items-center space-x-3">
+        <span id="userDisplayName" class="text-xs sm:text-sm text-slate-300 font-medium hidden sm:inline">載入中...</span>
+        <button onclick="handleLogout()" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition">登出</button>
       </div>
     </div>
   </header>
 
   <!-- 主內容區 -->
-  <main class="max-w-7xl mx-auto px-4 py-8 flex-1 w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
-    <!-- 左側：計畫清單與進度 -->
-    <div class="lg:col-span-1 space-y-6">
-      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <h3 class="text-base font-bold text-slate-800 mb-4">專案與進度</h3>
-        <div id="planSelectorContainer" class="space-y-2 mb-6">
-          <!-- 動態載入計畫 -->
-        </div>
-        <div class="pt-4 border-t border-slate-100">
-          <div class="flex justify-between text-sm mb-2 font-medium">
-            <span class="text-slate-500">整體達成率</span>
-            <span id="progressPercent" class="text-indigo-600 font-bold">0%</span>
+  <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full space-y-6">
+    
+    <!-- 頂部儀表板與進度卡片 -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-center">
+        <!-- 進度圓餅/環形數字 -->
+        <div class="flex items-center space-x-5 md:border-r border-slate-800 pr-4">
+          <div class="relative w-24 h-24 flex items-center justify-center bg-slate-800/80 rounded-full border-4 border-slate-700">
+            <span id="progressPercentText" class="text-2xl font-bold text-white">0%</span>
           </div>
-          <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-            <div id="progressBar" class="bg-indigo-600 h-full transition-all duration-500" style="width: 0%"></div>
+          <div>
+            <div id="completedRatioText" class="text-lg font-bold text-white">0 / 100 已完成</div>
+            <div class="text-xs text-slate-400 mt-1">跨裝置雲端同步中</div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- 右側：100 目標清單呈現 -->
-    <div class="lg:col-span-2 space-y-6">
-      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <div class="flex justify-between items-center mb-6">
-          <h3 id="currentPlanTitle" class="text-lg font-bold text-slate-800">載入中計畫...</h3>
-          <span id="completedCountBadge" class="text-xs px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-full font-semibold">已完成 0 / 100</span>
-        </div>
-        <!-- 目標清單列表 -->
-        <div id="goalsContainer" class="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-          <!-- 動態渲染目標 -->
+        <!-- 專案標題與分類標籤 -->
+        <div class="md:col-span-3 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 id="currentPlanTitle" class="text-xl font-bold text-white tracking-wide">2028 年底終極願景計畫</h2>
+            <span class="text-xs px-3 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full">目標期限：2028-12-31</span>
+          </div>
+          
+          <!-- 10大類別小標籤 -->
+          <div id="categoryBadges" class="flex flex-wrap gap-1.5 pt-1">
+            <!-- 動態生成分類統計 -->
+          </div>
         </div>
       </div>
-    </div>
+    </section>
+
+    <!-- 搜尋與過濾工具列 -->
+    <section class="flex flex-col md:flex-row gap-3 items-center justify-between bg-slate-900/50 p-3 rounded-2xl border border-slate-800/80">
+      <div class="w-full md:w-96 relative">
+        <input type="text" id="searchInput" oninput="filterGoals()" placeholder="搜尋關鍵字、心得備註..." class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+      
+      <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+        <select id="categoryFilter" onchange="filterGoals()" class="bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="all">全部領域 (10 大類別)</option>
+          <option value="職涯發展">職涯發展</option>
+          <option value="理財投資">理財投資</option>
+          <option value="健康運動">健康運動</option>
+          <option value="自我成長">自我成長</option>
+          <option value="旅行探索">旅行探索</option>
+          <option value="人際家庭">人際家庭</option>
+          <option value="生活品味">生活品味</option>
+          <option value="創作作品">創作作品</option>
+          <option value="心靈靈性">心靈靈性</option>
+          <option value="社會奉獻">社會奉獻</option>
+        </select>
+
+        <select id="statusFilter" onchange="filterGoals()" class="bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="all">全部狀態</option>
+          <option value="completed">已完成</option>
+          <option value="uncompleted">未完成</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- 目標清單卡片網格 -->
+    <section class="space-y-4">
+      <div class="flex items-center justify-between px-1">
+        <h3 class="text-sm font-semibold text-slate-400 tracking-wider uppercase">百項修煉清單列表</h3>
+        <span id="displayCountText" class="text-xs text-slate-500">顯示 100 項</span>
+      </div>
+
+      <div id="goalsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- 動態渲染卡片 -->
+      </div>
+    </section>
+
   </main>
 
   <!-- Firebase 邏輯與主程式 -->
@@ -122,7 +165,7 @@
       getDocs 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // 已帶入您的 Firebase 專案設定
+    // 您的 Firebase 設定
     const firebaseConfig = {
       apiKey: "AIzaSyCUJnYsOHmLGV6QU93VrVoia4LBP77HS_c",
       authDomain: "teastd-a57c4.firebaseapp.com",
@@ -142,6 +185,11 @@
     let activePlanId = null;
     let isRegisterMode = false;
     let isForgotMode = false;
+
+    const categoriesList = [
+      "職涯發展", "理財投資", "健康運動", "自我成長", "旅行探索", 
+      "人際家庭", "生活品味", "創作作品", "心靈靈性", "社會奉獻"
+    ];
 
     // 監聽登入狀態
     onAuthStateChanged(auth, async (user) => {
@@ -185,11 +233,19 @@
     function createDefaultPlan() {
       const goals = [];
       for (let i = 1; i <= 100; i++) {
-        goals.push({ id: i, text: `人生目標第 ${i} 件事`, completed: false });
+        const cat = categoriesList[(i - 1) % categoriesList.length];
+        goals.push({
+          id: i,
+          category: cat,
+          text: `人生願景目標第 ${i} 件事：在 ${cat} 領域達成重要突破`,
+          completed: false,
+          completedAt: "",
+          note: ""
+        });
       }
       return {
-        id: "plan_" + Date.now(),
-        title: "我的 2027 終極目標清單",
+        id: "plan_2028",
+        title: "2028 年底終極願景計畫",
         goals: goals
       };
     }
@@ -204,28 +260,75 @@
       }
     }
 
-    // 渲染畫面
+    // 渲染主畫面
     window.renderApp = function() {
       const plan = userPlans[activePlanId];
       if (!plan) return;
 
       document.getElementById("currentPlanTitle").textContent = plan.title;
-      
-      const completedCount = plan.goals.filter(g => g.completed).length;
-      const percent = Math.round((completedCount / 100) * 100);
-      
-      document.getElementById("completedCountBadge").textContent = `已完成 ${completedCount} / 100`;
-      document.getElementById("progressPercent").textContent = `${percent}%`;
-      document.getElementById("progressBar").style.width = `${percent}%`;
 
-      const goalsHtml = plan.goals.map(g => `
-        <div class="flex items-center p-3 rounded-xl border ${g.completed ? 'bg-emerald-50/50 border-emerald-200 text-emerald-900' : 'bg-slate-50 border-slate-200 text-slate-700'} transition">
-          <input type="checkbox" ${g.completed ? 'checked' : ''} onchange="window.toggleGoal(${g.id})" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer">
-          <span class="ml-3 text-sm font-medium ${g.completed ? 'line-through opacity-75' : ''}">${g.text}</span>
+      const total = plan.goals.length;
+      const completedCount = plan.goals.filter(g => g.completed).length;
+      const percent = Math.round((completedCount / total) * 100);
+
+      document.getElementById("progressPercentText").textContent = `${percent}%`;
+      document.getElementById("completedRatioText").textContent = `${completedCount} / ${total} 已完成`;
+
+      // 渲染 10 大類別統計 Badges
+      let badgesHtml = "";
+      categoriesList.forEach(cat => {
+        const catGoals = plan.goals.filter(g => g.category === cat);
+        const catDone = catGoals.filter(g => g.completed).length;
+        badgesHtml += `<span class="text-xs px-2.5 py-1 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg font-medium">📁 ${cat} (${catDone}/${catGoals.length})</span>`;
+      });
+      document.getElementById("categoryBadges").innerHTML = badgesHtml;
+
+      filterGoals();
+    };
+
+    // 篩選與渲染目標列表
+    window.filterGoals = function() {
+      const plan = userPlans[activePlanId];
+      if (!plan) return;
+
+      const keyword = document.getElementById("searchInput").value.toLowerCase();
+      const selectedCat = document.getElementById("categoryFilter").value;
+      const selectedStatus = document.getElementById("statusFilter").value;
+
+      const filtered = plan.goals.filter(g => {
+        const matchKeyword = g.text.toLowerCase().includes(keyword) || (g.note && g.note.toLowerCase().includes(keyword));
+        const matchCat = selectedCat === 'all' || g.category === selectedCat;
+        const matchStatus = selectedStatus === 'all' || 
+                            (selectedStatus === 'completed' && g.completed) || 
+                            (selectedStatus === 'uncompleted' && !g.completed);
+        return matchKeyword && matchCat && matchStatus;
+      });
+
+      document.getElementById("displayCountText").textContent = `顯示 ${filtered.length} / ${plan.goals.length} 項`;
+
+      const gridHtml = filtered.map(g => `
+        <div class="bg-slate-900 border ${g.completed ? 'border-emerald-500/40 bg-emerald-950/10' : 'border-slate-800'} rounded-2xl p-5 flex flex-col justify-between space-y-4 shadow-md transition hover:border-slate-700">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center space-x-3">
+              <input type="checkbox" ${g.completed ? 'checked' : ''} onchange="window.toggleGoal(${g.id})" class="w-5 h-5 accent-indigo-600 rounded cursor-pointer mt-0.5">
+              <span class="text-sm font-medium ${g.completed ? 'line-through text-slate-500' : 'text-slate-200'}">${g.text}</span>
+            </div>
+            <span class="text-xs px-2 py-0.5 bg-slate-800 text-slate-400 rounded-md font-mono shrink-0">#${g.id}</span>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/60 text-xs text-slate-400">
+            <div class="flex items-center space-x-2">
+              <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 rounded">${g.category}</span>
+              <span class="text-slate-500">完成日期: ${g.completedAt || 'yyyy/mm/dd'}</span>
+            </div>
+            <div>
+              <input type="text" value="${g.note || ''}" placeholder="+新增心得備註" onchange="window.updateGoalNote(${g.id}, this.value)" class="bg-slate-800/80 border border-slate-700/60 rounded px-2.5 py-1 text-xs text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-36">
+            </div>
+          </div>
         </div>
       `).join('');
 
-      document.getElementById("goalsContainer").innerHTML = goalsHtml;
+      document.getElementById("goalsGrid").innerHTML = gridHtml || `<div class="col-span-2 text-center py-12 text-slate-500">沒有找到符合條件的目標項目</div>`;
     };
 
     window.toggleGoal = async function(goalId) {
@@ -234,7 +337,20 @@
       const goal = plan.goals.find(g => g.id === goalId);
       if (goal) {
         goal.completed = !goal.completed;
+        const now = new Date();
+        goal.completedAt = goal.completed ? `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}` : "";
+        
         window.renderApp();
+        await savePlanToCloud(plan);
+      }
+    };
+
+    window.updateGoalNote = async function(goalId, noteText) {
+      const plan = userPlans[activePlanId];
+      if (!plan) return;
+      const goal = plan.goals.find(g => g.id === goalId);
+      if (goal) {
+        goal.note = noteText;
         await savePlanToCloud(plan);
       }
     };
