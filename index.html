@@ -3,11 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>願景與 100 項人生必做清單 - 雲端多週期同步版</title>
+  <title>人生必做 100 件事 - 終極雲端同步版</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { background-color: #0b0f19; color: #f8fafc; }
+    @media print {
+      body { background-color: white !important; color: black !important; }
+      .no-print { display: none !important; }
+      .print-only { display: block !important; }
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
@@ -23,8 +28,8 @@
         <p id="authSubtitle" class="text-sm text-slate-400 mt-1">登入以同步您的專屬人生願景與多週期計畫</p>
       </div>
 
-      <!-- 登入/註冊/忘記密碼表單 -->
-      <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+      <!-- 登入表單 -->
+      <form id="authForm" onsubmit="window.handleAuthSubmit(event)" class="space-y-4">
         <div id="nameFieldContainer" class="hidden">
           <label class="block text-xs font-semibold text-slate-400 mb-1">顯示名稱 (您的姓名或暱稱)</label>
           <input type="text" id="regName" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" placeholder="例如：志鵬">
@@ -39,7 +44,7 @@
         </div>
 
         <div class="flex items-center justify-between text-xs">
-          <button type="button" onclick="switchAuthMode('forgot')" id="forgotPasswordBtn" class="text-indigo-400 hover:underline">忘記密碼？</button>
+          <button type="button" onclick="window.switchAuthMode('forgot')" id="forgotPasswordBtn" class="text-indigo-400 hover:underline">忘記密碼？</button>
         </div>
 
         <button type="submit" id="authSubmitBtn" class="w-full py-3.5 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/30">
@@ -50,7 +55,7 @@
       <!-- 切換模式按鈕 -->
       <div class="text-center mt-6 text-xs text-slate-400 space-x-1">
         <span id="authToggleText">還沒有帳號？</span>
-        <button type="button" onclick="switchAuthMode('toggle')" id="authToggleBtn" class="text-indigo-400 font-semibold hover:underline">立即註冊</button>
+        <button type="button" onclick="window.switchAuthMode('toggle')" id="authToggleBtn" class="text-indigo-400 font-semibold hover:underline">立即註冊</button>
       </div>
     </div>
   </div>
@@ -65,17 +70,79 @@
       </div>
       <div>
         <label class="block text-xs text-slate-400 mb-1">目標完成期限</label>
-        <input type="date" id="newPlanDateInput" class="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <input type="date" id="newPlanDateInput" class="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" value="2027-12-31">
       </div>
       <div class="flex justify-end space-x-3 pt-2">
-        <button onclick="closeNewPlanModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs">取消</button>
-        <button onclick="confirmCreateNewPlan()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold">確認建立</button>
+        <button onclick="window.closeNewPlanModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs">取消</button>
+        <button onclick="window.confirmCreateNewPlan()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold">確認建立</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 自訂新增項目彈跳視窗 -->
+  <div id="customItemModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <h3 class="text-lg font-bold text-white">自行新增修煉項目</h3>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">選擇領域</label>
+        <select id="customItemCategory" class="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="外表、髮型、儀容、穿搭">🧍 外表、髮型、儀容、穿搭</option>
+          <option value="體態、運動、健康">💪 體態、運動、健康</option>
+          <option value="睡眠與生活作息">😴 睡眠與生活作息</option>
+          <option value="情緒穩定與成熟度">🧠 情緒穩定與成熟度</option>
+          <option value="工作、能力與職涯">💼 工作、能力與職涯</option>
+          <option value="財務與消費習慣">💰 財務與消費習慣</option>
+          <option value="感情、社交與界線">❤️ 感情、社交與界線</option>
+          <option value="談吐、溝通與氣質">🗣️ 談吐、溝通與氣質</option>
+          <option value="閱讀、品味與生活品質">🎵 閱讀、品味與生活品質</option>
+          <option value="房間、手機、數位生活">🏠 房間、手機、數位生活</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">目標內容描述</label>
+        <input type="text" id="customItemTextInput" class="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="例如：每個月讀完兩本商業經營好書">
+      </div>
+      <div class="flex justify-end space-x-3 pt-2">
+        <button onclick="window.closeCustomItemModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs">取消</button>
+        <button onclick="window.confirmAddCustomItem()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold">新增至清單</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 最終覆盤與 PDF 匯出彈跳視窗 -->
+  <div id="reviewModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-3xl w-full p-8 space-y-6 shadow-2xl my-8">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+        <h3 id="reviewModalTitle" class="text-xl font-bold text-white">📊 週期最終覆盤與自我評分</h3>
+        <button onclick="window.closeReviewModal()" class="text-slate-400 hover:text-white text-sm">✕ 關閉</button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">整體自我評分 (0 ~ 100 分)</label>
+          <input type="number" id="reviewScoreInput" min="0" max="100" class="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="例如：85">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">本週期綜合心得與深度反思</label>
+          <textarea id="reviewNotesInput" rows="4" class="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="記錄這段期間的收穫、突破與未來改善方向..."></textarea>
+        </div>
+        <div>
+          <h4 class="text-sm font-bold text-slate-300 mb-2">📌 未完成項目追蹤清單</h4>
+          <div id="unfinishedListContainer" class="max-h-48 overflow-y-auto space-y-2 bg-slate-950/50 p-3 rounded-xl border border-slate-800 text-xs text-slate-400">
+            <!-- 動態填入未完成項目 -->
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-3 pt-4 border-t border-slate-800">
+        <button onclick="window.saveReviewData()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold">儲存覆盤資料</button>
+        <button onclick="window.exportPDF()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/30">📥 匯出並列印 PDF 報表</button>
       </div>
     </div>
   </div>
 
   <!-- 頂部導覽列 -->
-  <header class="bg-slate-900/80 backdrop-blur border-b border-slate-800 sticky top-0 z-30">
+  <header class="bg-slate-900/80 backdrop-blur border-b border-slate-800 sticky top-0 z-30 no-print">
     <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between flex-wrap gap-2">
       <div class="flex items-center space-x-3">
         <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md shadow-indigo-600/30">🎯</div>
@@ -84,13 +151,14 @@
 
       <!-- 週期切換與功能列 -->
       <div class="flex items-center space-x-2 flex-wrap">
-        <select id="planSelector" onchange="switchActivePlan(this.value)" class="bg-slate-800 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
-          <!-- 動態載入各個週期計畫 -->
+        <select id="planSelector" onchange="window.switchActivePlan(this.value)" class="bg-slate-800 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+          <!-- 動態載入 -->
         </select>
-        <button onclick="openNewPlanModal()" class="text-xs px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 rounded-xl transition font-medium">+ 新週期</button>
-        <button onclick="resetAndChangeGoals()" class="text-xs px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 rounded-xl transition font-medium">🎲 重設/換100項</button>
+        <button onclick="window.openNewPlanModal()" class="text-xs px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 rounded-xl transition font-medium">+ 新週期</button>
+        <button onclick="window.resetAndChangeGoals()" class="text-xs px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 rounded-xl transition font-medium">🎲 重設/換100項</button>
+        <button onclick="window.openReviewModal()" class="text-xs px-3 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-xl transition font-medium">📊 最終覆盤與PDF</button>
         <span id="userDisplayName" class="text-xs text-slate-300 font-medium px-2">載入中...</span>
-        <button onclick="handleLogout()" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition">登出</button>
+        <button onclick="window.handleLogout()" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition">登出</button>
       </div>
     </div>
   </header>
@@ -128,31 +196,33 @@
     </section>
 
     <!-- 搜尋與過濾工具列 -->
-    <section class="flex flex-col md:flex-row gap-3 items-center justify-between bg-slate-900/50 p-3 rounded-2xl border border-slate-800/80">
-      <div class="w-full md:w-96 relative">
-        <input type="text" id="searchInput" oninput="filterGoals()" placeholder="搜尋關鍵字、心得備註..." class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+    <section class="flex flex-col md:flex-row gap-3 items-center justify-between bg-slate-900/50 p-3 rounded-2xl border border-slate-800/80 no-print">
+      <div class="w-full md:w-80 relative">
+        <input type="text" id="searchInput" oninput="window.filterGoals()" placeholder="搜尋關鍵字、心得備註..." class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
       </div>
       
       <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
-        <select id="categoryFilter" onchange="filterGoals()" class="bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-          <option value="all">全部領域 (10 大類別)</option>
-          <option value="職涯發展">職涯發展</option>
-          <option value="理財投資">理財投資</option>
-          <option value="健康運動">健康運動</option>
-          <option value="自我成長">自我成長</option>
-          <option value="旅行探索">旅行探索</option>
-          <option value="人際家庭">人際家庭</option>
-          <option value="生活品味">生活品味</option>
-          <option value="創作作品">創作作品</option>
-          <option value="心靈靈性">心靈靈性</option>
-          <option value="社會奉獻">社會奉獻</option>
+        <select id="categoryFilter" onchange="window.filterGoals()" class="bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="all">全部 10 大類別領域</option>
+          <option value="外表、髮型、儀容、穿搭">🧍 外表、髮型、儀容、穿搭</option>
+          <option value="體態、運動、健康">💪 體態、運動、健康</option>
+          <option value="睡眠與生活作息">😴 睡眠與生活作息</option>
+          <option value="情緒穩定與成熟度">🧠 情緒穩定與成熟度</option>
+          <option value="工作、能力與職涯">💼 工作、能力與職涯</option>
+          <option value="財務與消費習慣">💰 財務與消費習慣</option>
+          <option value="感情、社交與界線">❤️ 感情、社交與界線</option>
+          <option value="談吐、溝通與氣質">🗣️ 談吐、溝通與氣質</option>
+          <option value="閱讀、品味與生活品質">🎵 閱讀、品味與生活品質</option>
+          <option value="房間、手機、數位生活">🏠 房間、手機、數位生活</option>
         </select>
 
-        <select id="statusFilter" onchange="filterGoals()" class="bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <select id="statusFilter" onchange="window.filterGoals()" class="bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
           <option value="all">全部狀態</option>
           <option value="completed">已完成</option>
           <option value="uncompleted">未完成</option>
         </select>
+
+        <button onclick="window.openCustomItemModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition">+ 自行新增項目</button>
       </div>
     </section>
 
@@ -187,11 +257,9 @@
       doc, 
       setDoc, 
       collection, 
-      getDocs,
-      deleteDoc 
+      getDocs 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // 您的 Firebase 專案設定
     const firebaseConfig = {
       apiKey: "AIzaSyCUJnYsOHmLGV6QU93VrVoia4LBP77HS_c",
       authDomain: "teastd-a57c4.firebaseapp.com",
@@ -209,75 +277,86 @@
     let currentUser = null;
     let userPlans = {};
     let activePlanId = null;
-    let authMode = 'login'; // 'login', 'register', 'forgot'
+    let authMode = 'login';
 
     const categoriesList = [
-      "職涯發展", "理財投資", "健康運動", "自我成長", "旅行探索", 
-      "人際家庭", "生活品味", "創作作品", "心靈靈性", "社會奉獻"
+      "外表、髮型、儀容、穿搭",
+      "體態、運動、健康",
+      "睡眠與生活作息",
+      "情緒穩定與成熟度",
+      "工作、能力與職涯",
+      "財務與消費習慣",
+      "感情、社交與界線",
+      "談吐、溝通與氣質",
+      "閱讀、品味與生活品質",
+      "房間、手機、數位生活"
     ];
 
-    // 豐富的目標題庫池（供動態隨機換題與重設使用）
+    // 龐大且豐富的 10 大領域題庫池（支援多樣性變化與重設換題）
     const goalPools = {
-      "職涯發展": [
-        "學習並熟練運用 AI 工具提升 50% 工作效率", "升遷、轉職至理想職位或完成一次職涯跳躍", "獨立談成一次重大業務合作或合約",
-        "建立優質專業 networking 圈（認識 10 位領域優秀同仁）", "考取一項對職涯有實質幫助的高階專業證照",
-        "主辦一場大型專案發表會或跨部門協作專案", "在專業領域發表 3 篇深度技術或行業分析文章", "建立個人專業履歷與作品集網站"
+      "外表、髮型、儀容、穿搭": [
+        "找到最適合自己臉型的質感髮型與日常定型習慣", "建立一套適合職場與休閒的精緻膠囊衣櫃（Capsule Wardrobe）",
+        "每季定期保養皮膚，維持乾淨清爽的好氣色", "學會基礎日常穿搭色彩搭配與比例修飾技巧", "養成隨身攜帶手帕、香水與維持指甲整潔的好習慣",
+        "尋找並確立專屬的個人穿搭風格與配件飾品", "定期挑選並淘汰不合身或過時的舊衣物", "建立良好站姿與走路儀態，展現自信氣場"
       ],
-      "理財投資": [
-        "建立完善的個人資產配置與自動化投資系統", "達成半年以上的緊急預備金安全存款水位", "研究並佈局至少 3 檔優質長期配息 ETF",
-        "完成一整年的記帳與消費優化檢討", "創造非主動收入來源（如版稅、股利或副業營收）", "閱讀 5 本經典投資理財與財商書籍",
-        "釐清並還清所有不必要的負債與信用卡循環利息"
+      "體態、運動,健康": [
+        "每週規律進行 3 次有氧與重訓結合的健身菜單", "體脂率控制在理想健康範圍內並鍛鍊核心線條", "每天喝足 2000c.c. 優質水分與足量蔬果",
+        "戒除精緻糖、宵夜與手搖飲，維持清淡原型食物", "完成一次年度全身健康檢查與牙齒定期洗牙檢查",
+        "每天晨起進行 15 分鐘伸展與筋膜放鬆", "學習並掌握一項全新運動（如游泳、網球、拳擊或瑜珈）"
       ],
-      "健康運動": [
-        "挑戰並完成一場半程馬拉松或 10 公里路跑", "養成每週至少規律運動 3 次的習慣", "體脂率降至標準健康範圍或練出明顯線條",
-        "戒掉含糖飲料與宵夜，維持清淡健康飲食", "進行一次完整的全身健康檢查", "每晚維持 7-8 小時高品質睡眠與規律作息",
-        "學會一項全新運動（如游泳、網球、攀岩或瑜珈）"
+      "睡眠與生活作息": [
+        "建立固定在 23:00 前就寢、07:00 前起床的生理時鐘", "打造完全遮光、安靜且舒適的高品質睡眠臥室環境",
+        "睡前 1 小時徹底遠離 3C 藍光，進行閱讀或冥想", "週末維持與平日相近的作息，避免嚴重「社交時差」",
+        "養成早起享用健康早餐與曬太陽的晨間儀式"
       ],
-      "自我成長": [
-        "一年內讀完並做筆記輸出 24 本好書", "掌握一門全新外語或通過中高級檢定", "每天進行 15 分鐘冥想與心靈沉澱",
-        "養成早起（5:30 - 6:00 之間）的高效晨間習慣", "完成一門線上優質專業學程並取得結業證書",
-        "學習高效時間管理與番茄鐘工作法", "每週撰寫一篇深刻的自我反思週記"
+      "情緒穩定與成熟度": [
+        "面對突發壓力時學會先深呼吸 10 秒再理性回應", "寫情緒日記記錄並覺察自己的內在焦慮來源", "學會溫和而堅定地表達內在界線與真實感受",
+        "不再輕易受到他人情緒與無謂批評的影響", "培養對挫折的高韌性與正向覆盤轉念能力", "每天睡前進行 3 件感恩事項的覺察練習"
       ],
-      "旅行探索": [
-        "規劃並完成一趟為期 5 天以上的深度鐵道雪國之旅", "獨自一人完成一趟國內或國外背包客旅行", "造訪 3 個從未去過的台灣特色鄉鎮與古道",
-        "在海島國家體驗潛水或衝浪活動", "品嚐 10 家在地知名米其林或特色私廚料理", "收集 5 張不同國家的特色風景明信片",
-        "體驗一次高空彈跳、熱氣球或跳傘極限活動"
+      "工作、能力與職涯": [
+        "學習並熟練運用生成式 AI 工具提升 50% 工作產出效率", "升遷至理想職位或完成一次具有突破性的職涯跳躍",
+        "獨立主辦並完美交付一項跨部門重大專案任務", "考取一項對職涯發展有實質幫助的高階專業證照",
+        "在專業領域發表 3 篇深度洞察文章或技術分享", "建立高價值的職場專業人脈圈與導師連結"
       ],
-      "人際家庭": [
-        "安排每月一次與父母的深度聚餐或孝親旅行", "舉辦一場溫馨的親朋好友週末聚會", "手寫並寄出 5 張感謝卡給生命中的貴人",
-        "為伴侶精心策劃一場難忘的浪漫紀念日", "每季至少陪伴好友深度談心一次", "加入一個志工團體或公益社群回饋社會"
+      "財務與消費習慣": [
+        "建立完善且自動化的個人資產配置與記帳習慣", "累積至少 6 個月生活費的緊急預備金安全存款水位",
+        "研究並執行至少 3 檔優質長期配息 ETF 定期定額", "執行嚴格的「延遲滿足消費法」，避免衝動購物",
+        "釐清並徹底結清所有不必要的信用卡循環利息或負債"
       ],
-      "生活品味": [
-        "親手打造極簡且舒適的居家工作/生活空間", "學會手沖精品咖啡或品嚐 5 種頂級莊園豆",
-        "挑選並購入一件質感極佳的經典耐用衣物或配件", "在家親手烹調 10 道拿手健康料理", "種植 3 盆綠意植栽並照顧它們茁壯"
+      "感情、社交與界線": [
+        "定期安排與父母及摯愛親友的深度陪伴聚餐", "學會遠離消耗能量的毒性人際關係（Toxic Relationships）",
+        "為伴侶或重要他人精心策劃一場難忘的浪漫約會", "手寫並寄出感謝信給生命中曾幫助過自己的貴人",
+        "擴大優質社交圈，結識 5 位以上各領域優秀同好"
       ],
-      "創作作品": [
-        "出版一本電子書、個人專題或完成音樂創作", "建立個人部落格或自媒體頻道並持續更新 10 篇/部",
-        "手繪或攝影記錄生活美好瞬間並舉辦小型線上展覽", "製作一個能解決實際痛點的小型軟體工具", "寫下 5 封給未來自己的時空膠囊信件"
+      "談吐、溝通與氣質": [
+        "說話語調溫和堅定、邏輯清晰且富有同理心", "練習「深度傾聽」，在對話中給予對方真誠的回饋",
+        "閱讀 3 本溝通心理學與演說表達經典書籍", "在公開場合演講或簡報時能做到從容不迫、眼神自信",
+        "減少口頭禪與急躁情緒，展現沉穩大氣的談吐氣質"
       ],
-      "心靈靈性": [
-        "完成一趟寺廟靜修、心靈課程或大自然芬多精洗禮", "列出 50 件人生感恩清單並深切體會", "學會對無能為力的事徹底放手與自我和解",
-        "進行一次為期一週的數位排毒（減少社群網路使用）"
+      "閱讀、品味與生活品質": [
+        "一年內讀完並輸出 24 本深度好書的閱讀筆記", "學會手沖精品咖啡、品茶或品酒的生活美學儀式",
+        "親手烹調 10 道健康美味的拿手私房料理", "造訪 3 家充滿美學設計感的獨立書店或藝文展覽",
+        "為居家空間添購一盞質感桌燈或香氛營造氛圍"
       ],
-      "社會奉獻": [
-        "參與偏鄉教育、環保淨灘或動物保護志工服務", "定期小額資助弱勢兒童或流浪動物機構", "將用不到的書籍與物資捐贈給需要的人",
-        "在職場或社群中無私指導與協助 3 位後輩新手"
+      "房間、手機、數位生活": [
+        "執行房間「斷捨離」，維持桌面與衣櫃隨時整潔清爽", "徹底整理手機 App 頁面與電腦雲端硬碟的數位檔案",
+        "每週進行一次 3C 產品與生活環境的深度大掃除", "定期備份重要照片與工作檔案至雲端或外接硬碟",
+        "設定手機螢幕使用時間限制，減少無意識刷社群"
       ]
     };
 
-    // 隨機或依序產生 100 項豐富目標
+    // 自動產生 100 項豐富目標（每大類 10 項，合計 100 項）
     function generateRandom100Goals() {
       const goals = [];
       let idCounter = 1;
       
-      // 確保 10 大類別平均分配（每類 10 項，共 100 項）
       categoriesList.forEach(cat => {
-        const pool = [...goalPools[cat]];
-        // 隨機打亂該分類題庫
+        const pool = [...(goalPools[cat] || ["在該領域達成重大突破與日常精進"])];
+        // 隨機打亂題庫
         pool.sort(() => Math.random() - 0.5);
         
         for (let i = 0; i < 10; i++) {
-          const text = pool[i % pool.length] + (i >= pool.length ? ` (進階版 #${i+1})` : '');
+          const text = pool[i % pool.length] + (i >= pool.length ? ` (進階修煉 #${i+1})` : '');
           goals.push({
             id: idCounter++,
             category: cat,
@@ -289,14 +368,12 @@
         }
       });
 
-      // 打亂整體 100 項順序讓畫面更多元
       goals.sort(() => Math.random() - 0.5);
-      // 重新賦予流水號 1~100
       goals.forEach((g, idx) => g.id = idx + 1);
       return goals;
     }
 
-    // 監聽登入狀態 (Firebase 本地持久化自動維持登入)
+    // 監聽登入狀態
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         currentUser = user;
@@ -311,7 +388,7 @@
       }
     });
 
-    // 從雲端載入該帳號的所有週期計畫
+    // 從雲端載入資料
     async function loadUserDataFromCloud(uid) {
       try {
         const plansRef = collection(db, "users", uid, "plans");
@@ -321,19 +398,19 @@
           userPlans[docSnap.id] = docSnap.data();
         });
 
-        // 若雲端完全無資料，建立預設 2028 年計畫
         if (Object.keys(userPlans).length === 0) {
           const defaultPlan = {
-            id: "plan_default",
-            title: "2028 年底終極願景計畫",
-            targetDate: "2028-12-31",
-            goals: generateRandom100Goals()
+            id: "plan_2026",
+            title: "2026 年底終極願景計畫",
+            targetDate: "2026-12-31",
+            goals: generateRandom100Goals(),
+            reviewScore: "",
+            reviewNotes: ""
           };
           userPlans[defaultPlan.id] = defaultPlan;
           await savePlanToCloud(defaultPlan);
         }
 
-        // 預設選取第一個計畫
         activePlanId = Object.keys(userPlans)[0];
         renderPlanSelector();
         renderApp();
@@ -342,7 +419,6 @@
       }
     }
 
-    // 儲存計畫至雲端
     async function savePlanToCloud(plan) {
       if (!currentUser) return;
       try {
@@ -353,7 +429,6 @@
       }
     }
 
-    // 渲染上方週期選單下拉框
     window.renderPlanSelector = function() {
       const selector = document.getElementById("planSelector");
       let html = "";
@@ -363,7 +438,6 @@
       selector.innerHTML = html;
     };
 
-    // 切換作用中的週期計畫
     window.switchActivePlan = function(planId) {
       if (userPlans[planId]) {
         activePlanId = planId;
@@ -371,7 +445,7 @@
       }
     };
 
-    // 開啟/關閉 新增週期彈跳視窗
+    // 新增週期計畫彈跳視窗
     window.openNewPlanModal = function() {
       document.getElementById("newPlanModal").classList.remove("hidden");
       document.getElementById("newPlanTitleInput").value = "";
@@ -380,8 +454,6 @@
     window.closeNewPlanModal = function() {
       document.getElementById("newPlanModal").classList.add("hidden");
     };
-
-    // 確認建立新週期
     window.confirmCreateNewPlan = async function() {
       const title = document.getElementById("newPlanTitleInput").value.trim() || "新年度人生願景計畫";
       const targetDate = document.getElementById("newPlanDateInput").value || "2027-12-31";
@@ -391,7 +463,9 @@
         id: newPlanId,
         title: title,
         targetDate: targetDate,
-        goals: generateRandom100Goals()
+        goals: generateRandom100Goals(),
+        reviewScore: "",
+        reviewNotes: ""
       };
 
       userPlans[newPlanId] = newPlan;
@@ -403,20 +477,93 @@
       renderApp();
     };
 
-    // 重設/換 100 項目標（更換全新不同的 100 項）
+    // 重設/換 100 項
     window.resetAndChangeGoals = async function() {
       const plan = userPlans[activePlanId];
       if (!plan) return;
 
-      if (confirm(`確定要為「${plan.title}」重新洗牌並更換全新不同的 100 項人生清單嗎？目前的勾選狀態將會重設。`)) {
+      if (confirm(`確定要為「${plan.title}」重新洗牌並更換全新不同的 100 項人生修煉目標嗎？目前的打勾進度將會重新計算。`)) {
         plan.goals = generateRandom100Goals();
         await savePlanToCloud(plan);
         renderApp();
-        alert("已成功為您換上全新不同的 100 項人生目標！");
+        alert("已成功換上全新不同的 100 項人生目標！");
       }
     };
 
-    // 渲染主畫面與儀表板
+    // 自訂新增項目
+    window.openCustomItemModal = function() {
+      document.getElementById("customItemModal").classList.remove("hidden");
+      document.getElementById("customItemTextInput").value = "";
+    };
+    window.closeCustomItemModal = function() {
+      document.getElementById("customItemModal").classList.add("hidden");
+    };
+    window.confirmAddCustomItem = async function() {
+      const cat = document.getElementById("customItemCategory").value;
+      const text = document.getElementById("customItemTextInput").value.trim();
+      if (!text) {
+        alert("請輸入目標內容描述！");
+        return;
+      }
+      const plan = userPlans[activePlanId];
+      if (!plan) return;
+
+      const newId = plan.goals.length > 0 ? Math.max(...plan.goals.map(g => g.id)) + 1 : 1;
+      plan.goals.push({
+        id: newId,
+        category: cat,
+        text: text,
+        completed: false,
+        completedAt: "",
+        note: ""
+      });
+
+      await savePlanToCloud(plan);
+      closeCustomItemModal();
+      renderApp();
+      alert("成功新增自訂修煉項目！");
+    };
+
+    // 最終覆盤彈跳視窗
+    window.openReviewModal = function() {
+      const plan = userPlans[activePlanId];
+      if (!plan) return;
+
+      document.getElementById("reviewModalTitle").textContent = `📊 最終覆盤：${plan.title}`;
+      document.getElementById("reviewScoreInput").value = plan.reviewScore || "";
+      document.getElementById("reviewNotesInput").value = plan.reviewNotes || "";
+
+      const uncompleted = plan.goals.filter(g => !g.completed);
+      const container = document.getElementById("unfinishedListContainer");
+      if (uncompleted.length === 0) {
+        container.innerHTML = `<p class="text-emerald-400 font-medium">太棒了！所有 100 項目標皆已完美達成完畢！</p>`;
+      } else {
+        container.innerHTML = uncompleted.map(g => `<div class="p-2 bg-slate-900 rounded border border-slate-800"><span class="text-indigo-400 font-mono">[#${g.id}] [${g.category}]</span> ${g.text}</div>`).join('');
+      }
+
+      document.getElementById("reviewModal").classList.remove("hidden");
+    };
+    window.closeReviewModal = function() {
+      document.getElementById("reviewModal").classList.add("hidden");
+    };
+    window.saveReviewData = async function() {
+      const plan = userPlans[activePlanId];
+      if (!plan) return;
+
+      plan.reviewScore = document.getElementById("reviewScoreInput").value;
+      plan.reviewNotes = document.getElementById("reviewNotesInput").value;
+
+      await savePlanToCloud(plan);
+      alert("覆盤資料已成功儲存至雲端！");
+      closeReviewModal();
+    };
+
+    // 匯出 PDF
+    window.exportPDF = function() {
+      window.print();
+    };
+
+    // 渲染主畫面
     window.renderApp = function() {
       const plan = userPlans[activePlanId];
       if (!plan) return;
@@ -424,7 +571,6 @@
       document.getElementById("currentPlanTitle").textContent = plan.title;
       document.getElementById("currentPlanDeadline").textContent = `目標期限：${plan.targetDate || '未設定'}`;
 
-      // 計算倒數天數
       if (plan.targetDate) {
         const diffTime = new Date(plan.targetDate) - new Date();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -438,7 +584,6 @@
       document.getElementById("progressPercentText").textContent = `${percent}%`;
       document.getElementById("completedRatioText").textContent = `${completedCount} / ${total} 已完成`;
 
-      // 渲染 10 大類別統計 Badges
       let badgesHtml = "";
       categoriesList.forEach(cat => {
         const catGoals = plan.goals.filter(g => g.category === cat);
@@ -447,10 +592,10 @@
       });
       document.getElementById("categoryBadges").innerHTML = badgesHtml;
 
-      filterGoals();
+      window.filterGoals();
     };
 
-    // 篩選與渲染目標卡片清單
+    // 篩選與渲染卡片
     window.filterGoals = function() {
       const plan = userPlans[activePlanId];
       if (!plan) return;
@@ -519,7 +664,7 @@
       }
     };
 
-    // 認證介面切換 (登入 / 註冊 / 忘記密碼)
+    // 認證介面切換
     window.switchAuthMode = function(mode) {
       if (mode === 'toggle') {
         authMode = authMode === 'login' ? 'register' : 'login';
@@ -567,7 +712,6 @@
       }
     };
 
-    // 處理登入、註冊與忘記密碼送出
     window.handleAuthSubmit = async function(event) {
       event.preventDefault();
       const email = document.getElementById("authEmail").value.trim();
@@ -578,7 +722,7 @@
         if (authMode === 'forgot') {
           await sendPasswordResetEmail(auth, email);
           alert("重設密碼信件已發送至您的信箱，請至信箱收信並重設密碼。");
-          switchAuthMode('login');
+          window.switchAuthMode('login');
         } else if (authMode === 'register') {
           const res = await createUserWithEmailAndPassword(auth, email, password);
           if (name) {
@@ -593,7 +737,6 @@
       }
     };
 
-    // 登出
     window.handleLogout = async function() {
       await signOut(auth);
       location.reload();
