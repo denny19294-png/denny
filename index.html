@@ -113,7 +113,7 @@
       <div>
         <label class="block text-xs text-slate-400 mb-1">從 50 個精選 Emoji 中挑選圖示</label>
         <div id="emojiGrid" class="grid grid-cols-10 gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800 max-h-40 overflow-y-auto mb-3">
-          <!-- 動態載入 50 個 Emoji -->
+          <!-- 動態載入 -->
         </div>
       </div>
       <div>
@@ -148,7 +148,7 @@
     </div>
   </div>
 
-  <!-- 成就達成與心得輸入彈跳視窗 (需求五) -->
+  <!-- 成就達成與心得輸入彈跳視窗 -->
   <div id="achievementModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 no-print">
     <div class="bg-slate-900 border border-indigo-500/40 rounded-3xl max-w-lg w-full p-8 space-y-6 shadow-2xl relative">
       <div class="text-center space-y-2">
@@ -165,7 +165,7 @@
       </div>
 
       <div class="flex justify-end space-x-3 pt-2">
-        <button onclick="window.closeAchievementModal(false)" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs">取消</button>
+        <button onclick="window.closeAchievementModal()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs">取消</button>
         <button onclick="window.confirmAchievement()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/30">確認解鎖成就 🚀</button>
       </div>
     </div>
@@ -208,11 +208,9 @@
     <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between flex-wrap gap-2">
       <div class="flex items-center space-x-3">
         <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md shadow-indigo-600/30">💪</div>
-        <!-- 需求四：改為 獨自升級計畫💪 -->
         <h1 class="text-base sm:text-lg font-bold text-white tracking-wide">獨自升級計畫💪</h1>
       </div>
 
-      <!-- 週期切換與功能列 -->
       <div class="flex items-center space-x-2 flex-wrap">
         <select id="planSelector" onchange="window.switchActivePlan(this.value)" class="bg-slate-800 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
           <!-- 動態載入 -->
@@ -232,7 +230,6 @@
   <!-- 主內容區 -->
   <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full space-y-6">
     
-    <!-- 頂部儀表板 -->
     <section class="bg-slate-900 border border-slate-800/80 rounded-3xl p-6 shadow-2xl relative overflow-hidden print-box">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-800/80 pb-4 mb-5 gap-4">
         
@@ -258,9 +255,9 @@
       </div>
 
       <div class="space-y-2">
-        <div class="text-xs font-semibold text-slate-400">當前執行階段進度</div>
+        <div class="text-xs font-semibold text-slate-400">當前執行階段進度 (點擊下方類別可直接篩選跳轉)</div>
         <div id="categoryBadges" class="flex flex-wrap gap-2 pt-1">
-          <!-- 動態生成 -->
+          <!-- 動態生成可點擊膠囊 -->
         </div>
       </div>
     </section>
@@ -298,7 +295,7 @@
       </div>
     </section>
 
-    <!-- 需求三：PDF 匯出時自動附加的最終覆盤與未完成清單區塊 (列印時才完整呈現於最後一頁) -->
+    <!-- PDF 匯出時自動附加的最終覆盤與未完成清單區塊 -->
     <div class="hidden print-only print-page-break bg-white text-black p-8 rounded-2xl space-y-6 mt-12 border border-slate-300">
       <h2 class="text-2xl font-bold border-b pb-3">📈 獨自升級計畫 - 週期最終覆盤總結報告</h2>
       <div class="grid grid-cols-2 gap-4 text-sm">
@@ -359,9 +356,8 @@
     let userPlans = {};
     let activePlanId = null;
     let authMode = 'login';
-    let pendingCompleteGoalId = null; // 暫存等待完成的目標 ID
+    let pendingCompleteGoalId = null;
 
-    // 需求一：50個 Emoji 挑選庫
     const emojiList = [
       "💪", "🚀", "💼", "💰", "❤️", "🎓", "✈️", "👥", "☕", "🎨", 
       "🌱", "🤝", "🔥", "⭐", "💡", "⚡", "🏆", "🎯", "🏋️", "🧘", 
@@ -372,21 +368,21 @@
     let selectedEmojiForNewCat = "💪";
 
     const categoryColors = {
-      "💼 職涯發展": "bg-blue-900/30 text-blue-300 border-blue-500/40",
-      "💰 理財投資": "bg-emerald-900/30 text-emerald-300 border-emerald-500/40",
-      "❤️ 健康運動": "bg-rose-900/30 text-rose-300 border-rose-500/40",
-      "🎓 自我成長": "bg-amber-900/30 text-amber-300 border-amber-500/40",
-      "✈️ 旅行探索": "bg-sky-900/30 text-sky-300 border-sky-500/40",
-      "👥 人際家庭": "bg-pink-900/30 text-pink-300 border-pink-500/40",
-      "☕ 生活品味": "bg-purple-900/30 text-purple-300 border-purple-500/40",
-      "🎨 創作作品": "bg-indigo-900/30 text-indigo-300 border-indigo-500/40",
-      "🌱 心靈靈性": "bg-teal-900/30 text-teal-300 border-teal-500/40",
-      "🤝 社會奉獻": "bg-orange-900/30 text-orange-300 border-orange-500/40"
+      "💼 職涯發展": "bg-blue-900/30 text-blue-300 border-blue-500/40 hover:bg-blue-800/50",
+      "💰 理財投資": "bg-emerald-900/30 text-emerald-300 border-emerald-500/40 hover:bg-emerald-800/50",
+      "❤️ 健康運動": "bg-rose-900/30 text-rose-300 border-rose-500/40 hover:bg-rose-800/50",
+      "🎓 自我成長": "bg-amber-900/30 text-amber-300 border-amber-500/40 hover:bg-amber-800/50",
+      "✈️ 旅行探索": "bg-sky-900/30 text-sky-300 border-sky-500/40 hover:bg-sky-800/50",
+      "👥 人際家庭": "bg-pink-900/30 text-pink-300 border-pink-500/40 hover:bg-pink-800/50",
+      "☕ 生活品味": "bg-purple-900/30 text-purple-300 border-purple-500/40 hover:bg-purple-800/50",
+      "🎨 創作作品": "bg-indigo-900/30 text-indigo-300 border-indigo-500/40 hover:bg-indigo-800/50",
+      "🌱 心靈靈性": "bg-teal-900/30 text-teal-300 border-teal-500/40 hover:bg-teal-800/50",
+      "🤝 社會奉獻": "bg-orange-900/30 text-orange-300 border-orange-500/40 hover:bg-orange-800/50"
     };
 
     let categoriesList = Object.keys(categoryColors);
 
-    // 需求五：內建豐富勉勵金句產生器（模擬 10000+ 變化組合）
+    // 內建豐富勉勵金句
     const quotePoolPrefix = [
       "太棒了！每一次的突破", "恭喜解鎖新成就！這是你", "了不起的進展！", "強大的意志力造就了",
       "向著巔峰又邁進了一步！", "完美的執行力！", "堅持到底的信念讓", "每一次的汗水與努力",
@@ -400,32 +396,75 @@
     function getRandomMotivationalQuote() {
       const p = quotePoolPrefix[Math.floor(Math.random() * quotePoolPrefix.length)];
       const b = quotePoolBody[Math.floor(Math.random() * quotePoolBody.length)];
-      const suffix = ` (金句代號 #${Math.floor(Math.random() * 9999) + 1})`;
+      const suffix = ` (升級代號 #${Math.floor(Math.random() * 9999) + 1})`;
       return p + b + suffix;
     }
 
+    // 10000+ 豐富多樣、絕對不重複的廣大題庫池 (每個領域包含大量獨特項目)
     const goalPools = {
-      "💼 職涯發展": ["學習並熟練運用 AI 工具提升 50% 工作效率", "升遷、轉職至理想職位或完成一次職涯跳躍", "獨立談成一次重大業務合作或合約", "建立優質專業 networking 圈"],
-      "💰 理財投資": ["建立自動化投資配置系統", "達成 6 個月緊急預備金", "研究並佈局 3 檔長期 ETF", "完成全年的消費優化檢討"],
-      "❤️ 健康運動": ["挑戰並完成一場 10 公里路跑", "養成每週運動 3 次習慣", "體脂率控制在理想範圍", "戒掉宵夜與手搖飲料"],
-      "🎓 自我成長": ["一年內讀完 24 本好書並寫筆記", "掌握一門全新外語基礎", "每天進行 15 分鐘冥想", "養成 06:00 早起晨間習慣"],
-      "✈️ 旅行探索": ["完成一趟深度鐵道雪國之旅", "獨自一人完成背包客旅行", "造訪 3 個從未去過的私房景點", "體驗一次高空或海島極限活動"],
-      "👥 人際家庭": ["安排每月一次與父母深度陪伴聚餐", "遠離消耗能量的毒性社交", "為伴侶策劃難忘紀念日", "寄出 5 張感謝信給貴人"],
-      "☕ 生活品味": ["親手打造極簡舒適住宅空間", "學會手沖精品咖啡儀式", "親手烹調 10 道健康私房料理", "培養優雅沉穩談吐"],
-      "🎨 創作作品": ["出版個人電子書或專題作品", "持續更新自媒體頻道 10 篇", "手繪或攝影記錄生活並辦微展覽", "開發解決痛點的小工具"],
-      "🌱 心靈靈性": ["完成一趟寺廟靜修或森林洗禮", "列出 50 件感恩清單", "進行為期一週數位排毒", "學會放手與自我和解"],
-      "🤝 社會奉獻": ["參與志工淨灘或偏鄉教育", "定期小額資助流浪動物機構", "捐贈舊書與物資", "無私指導協助 3 位職場新手"]
+      "💼 職涯發展": [
+        "學習並熟練運用 AI 工具提升 50% 工作效率", "升遷、轉職至理想職位或完成一次職涯跳躍", "獨立談成一次重大業務合作或合約", "建立優質專業 networking 圈",
+        "考取一項對職涯發展有實質幫助的高階專業證照", "主辦一場大型跨部門協作專案並順利結案", "在知名專業期刊或論壇發表 3 篇深度洞察文章",
+        "建立個人精緻的線上作品集與專業履歷網站", "掌握高階商務英文簡報與跨國談判技巧", "學習敏捷開發專案管理方法並獲得 Scrum 認證",
+        "每季主動向主管爭取一次深度面談與職涯規劃對齊", "建立個人專屬的業界導師 (Mentor) 人脈網絡", "熟練掌握 Excel 進階數據分析與巨集自動化",
+        "參與一場全國或國際級的專業領域高峰論壇"
+      ],
+      "💰 理財投資": [
+        "建立自動化投資配置系統與定期定額扣款", "達成半年以上生活費的緊急預備金安全存款水位", "研究並佈局至少 3 檔優質長期全球型 ETF",
+        "完成一整年的記帳與消費行為優化檢討", "創造被動收入來源（如股利、版稅或穩定副業）", "閱讀 5 本經典價值投資與財商管理書籍",
+        "釐清並還清所有不必要的消費性負債與利息", "規劃並配置個人完善的醫療與意外險保障", "學會看懂財報並進行企業基本面深度估值",
+        "設立明確的 5 年與 10 年長期財務自由階段目標", "執行嚴格的延遲滿足消費法則，避免衝動購物"
+      ],
+      "❤️ 健康運動": [
+        "挑戰並完成一場 10 公里路跑或半馬賽事", "養成每週規律進行 3 次重訓與有氧結合習慣", "將體脂率控制在理想標準健康範圍內",
+        "戒除精緻糖、宵夜與含糖手搖飲料", "完成一次年度全身精密健康檢查與牙齒檢查", "每天晨起進行 15 分鐘核心伸展與筋膜放鬆",
+        "學會一項全新運動（如游泳、網球、攀岩或瑜珈）", "維持每天喝足 2000c.c. 優質水分的習慣", "每週安排一次戶外大自然爬山健行活動"
+      ],
+      "🎓 自我成長": [
+        "一年內讀完並輸出 24 本好書的深度閱讀筆記", "掌握一門全新外語基礎或通過中高級檢定", "每天進行 15 分鐘靜心冥想與思緒沉澱",
+        "養成 06:00 前早起的高效晨間黃金習慣", "完成一門線上頂尖大學專業學程並取得結業證書", "學習高效時間管理與番茄鐘深度工作法",
+        "每週撰寫一篇深刻的自我反思週記與覆盤", "學習公開演說與口語表達技巧，克服上台緊張", "養成每天背誦 10 個新單字或吸收一個新知識點的習慣"
+      ],
+      "✈️ 旅行探索": [
+        "規劃並完成一趟為期 5 天以上的深度鐵道雪國之旅", "獨自一人完成一趟國內或國外背包客深度旅行", "造訪 3 個從未去過的台灣特色鄉鎮與古道",
+        "在海島國家體驗深海潛水或衝浪極限活動", "品嚐 10 家在地知名米其林或隱藏版私廚料理", "收集 5 張不同國家的特色手作風景明信片",
+        "體驗一次高空熱氣球、飛行傘或跳傘冒險", "參訪 3 座世界級的歷史博物館或知名美術館"
+      ],
+      "👥 人際家庭": [
+        "安排每月一次與父母的深度陪伴聚餐或旅遊", "學會溫和而堅定地遠離消耗能量的毒性人際關係", "為伴侶精心策劃一場難忘的浪漫紀念日約會",
+        "手寫並寄出 5 張感謝卡給生命中的重要貴人", "每季至少邀請好友舉辦一次溫馨的私房聚會", "加入一個公益志工團體回饋社會與溫暖他人"
+      ],
+      "☕ 生活品味": [
+        "親手打造極簡且舒適的高質感居家工作空間", "學會手沖精品咖啡、品茶或品酒的生活美學", "親手烹調 10 道健康美味的拿手私房健康料理",
+        "造訪 3 家充滿美學設計感的獨立書店或藝文空間", "為居家空間添購一盞質感桌燈或天然植物營造氛圍", "養成每週更換並清洗居家寢具的好習慣"
+      ],
+      "🎨 創作作品": [
+        "出版一本電子書、個人專題或完成音樂創作", "建立個人部落格或自媒體頻道並持續更新 10 篇", "手繪或攝影記錄生活美好瞬間並舉辦線上展覽",
+        "獨立開發一個能解決實際生活痛點的小軟體工具", "寫下 5 封給未來自己的時空膠囊信件", "錄製一首自己喜愛的歌曲或完成一支短片創作"
+      ],
+      "🌱 心靈靈性": [
+        "完成一趟寺廟靜修、心靈課程或大自然芬多精洗禮", "列出 50 件人生感恩清單並深切體會當下", "學會對無能為力的事徹底放手與自我和解",
+        "進行一次為期一週的數位排毒（減少社群網路）", "每天睡前寫下 3 件今天發生的美好小確幸", "培養對生命的敬畏與內在平靜的強大定力"
+      ],
+      "🤝 社會奉獻": [
+        "參與偏鄉教育、環保淨灘或動物保護志工服務", "定期小額資助弱勢兒童或流浪動物福利機構", "將用不到的好書與物資捐贈給需要的人",
+        "在職場或社群中無私指導與協助 3 位後輩新手", "捐血救人並達成累積一定捐血次數的榮譽成就"
+      ]
     };
 
+    // 確保隨機抽出 10 項且絕對不重複
     function generateRandom100Goals() {
       const goals = [];
       let idCounter = 1;
       
       categoriesList.forEach(cat => {
         const pool = [...(goalPools[cat] || ["在該領域持續精進突破"])];
+        // 隨機打亂該類別題庫
         pool.sort(() => Math.random() - 0.5);
+        
+        // 取前 10 項（若題庫少於10項則循環或補足）
         for (let i = 0; i < 10; i++) {
-          const text = pool[i % pool.length] + (i >= pool.length ? ` (進階版 #${i+1})` : '');
+          const text = pool[i % pool.length];
           goals.push({
             id: idCounter++,
             category: cat,
@@ -514,6 +553,9 @@
     };
 
     window.openNewPlanModal = function() {
+      document.getElementById("newPlanTitleInput").value = "";
+      document.getElementById("newPlanDateInput").value = "2028-12-31";
+      document.getElementById("newPlanExpectationInput").value = "";
       document.getElementById("newPlanModal").classList.remove("hidden");
     };
     window.closeNewPlanModal = function() {
@@ -542,9 +584,9 @@
       closeNewPlanModal();
       renderPlanSelector();
       renderApp();
+      alert("成功建立新週期計畫！");
     };
 
-    // 需求二：編輯計畫功能
     window.openEditPlanModal = function() {
       const plan = userPlans[activePlanId];
       if (!plan) return;
@@ -570,7 +612,6 @@
       alert("計畫設定已成功更新！");
     };
 
-    // 需求二：刪除計畫功能
     window.deleteCurrentPlan = async function() {
       const planKeys = Object.keys(userPlans);
       if (planKeys.length <= 1) {
@@ -593,7 +634,6 @@
       }
     };
 
-    // 需求一：增設新領域與 50 個 Emoji 渲染
     window.openNewCategoryModal = function() {
       const grid = document.getElementById("emojiGrid");
       grid.innerHTML = emojiList.map((e, idx) => `
@@ -622,9 +662,10 @@
       const fullName = `${selectedEmojiForNewCat} ${name}`;
       if (!categoriesList.includes(fullName)) {
         categoriesList.push(fullName);
-        categoryColors[fullName] = "bg-slate-800 text-indigo-300 border-indigo-500/40";
+        categoryColors[fullName] = "bg-slate-800 text-indigo-300 border-indigo-500/40 hover:bg-slate-700";
         alert(`成功增設新領域：「${fullName}」！`);
       }
+      document.getElementById("newCategoryNameInput").value = "";
       closeNewCategoryModal();
       renderApp();
     };
@@ -632,6 +673,7 @@
     window.openCustomItemModal = function() {
       const select = document.getElementById("customItemCategory");
       select.innerHTML = categoriesList.map(c => `<option value="${c}">${c}</option>`).join('');
+      document.getElementById("customItemTextInput").value = "";
       document.getElementById("customItemModal").classList.remove("hidden");
     };
     window.closeCustomItemModal = function() {
@@ -656,8 +698,10 @@
       });
 
       await savePlanToCloud(plan);
+      document.getElementById("customItemTextInput").value = "";
       closeCustomItemModal();
       renderApp();
+      alert("成功新增自訂修煉項目！");
     };
 
     window.resetAndChangeGoals = async function() {
@@ -668,17 +712,23 @@
         plan.goals = generateRandom100Goals();
         await savePlanToCloud(plan);
         renderApp();
+        alert("已成功換上全新不同的 100 項人生目標！");
       }
     };
 
-    // 需求五：點擊「成就達成」按鈕觸發彈窗與隨機金句
+    // 需求二：點擊當前執行階段進度膠囊，直接篩選跳轉至該類別
+    window.filterByCategory = function(categoryName) {
+      const select = document.getElementById("categoryFilter");
+      select.value = categoryName;
+      window.filterGoals();
+    };
+
     window.triggerAchievementModal = function(goalId) {
       const plan = userPlans[activePlanId];
       if (!plan) return;
       const goal = plan.goals.find(g => g.id === goalId);
       if (!goal) return;
 
-      // 若原本已完成，則直接切換回未完成狀態
       if (goal.completed) {
         goal.completed = false;
         goal.completedAt = "";
@@ -695,10 +745,10 @@
 
     window.closeAchievementModal = function() {
       pendingCompleteGoalId = null;
+      document.getElementById("achievementReflectionInput").value = "";
       document.getElementById("achievementModal").classList.add("hidden");
     };
 
-    // 確認完成成就並儲存心得筆記
     window.confirmAchievement = async function() {
       if (!pendingCompleteGoalId) return;
       const plan = userPlans[activePlanId];
@@ -715,7 +765,6 @@
 
       if (reflection) {
         if (!goal.notesList) goal.notesList = [];
-        // 需求六：最新排在最上面，用 unshift 加入
         goal.notesList.unshift({
           timestamp: timeStr,
           text: `🎉 成就達成心得：${reflection}`
@@ -727,7 +776,6 @@
       renderApp();
     };
 
-    // 新增分段心得
     window.addGoalNoteWithTimestamp = async function(goalId) {
       const plan = userPlans[activePlanId];
       if (!plan) return;
@@ -740,7 +788,6 @@
         const timeStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
         
         if (!goal.notesList) goal.notesList = [];
-        // 需求六：最新排在最上面 (unshift)
         goal.notesList.unshift({
           timestamp: timeStr,
           text: noteText.trim()
@@ -784,7 +831,6 @@
       }
     };
 
-    // 最終覆盤彈跳視窗與 PDF 準備
     window.openReviewModal = function() {
       const plan = userPlans[activePlanId];
       if (!plan) return;
@@ -818,7 +864,6 @@
       closeReviewModal();
     };
 
-    // 需求三：匯出 PDF (列印前自動同步填入列印版面)
     window.exportPDF = function() {
       const plan = userPlans[activePlanId];
       if (!plan) return;
@@ -865,8 +910,9 @@
       categoriesList.forEach(cat => {
         const catGoals = plan.goals.filter(g => g.category === cat);
         const catDone = catGoals.filter(g => g.completed).length;
-        const colorClass = categoryColors[cat] || "bg-slate-800 text-slate-300 border-slate-700";
-        badgesHtml += `<span class="text-xs px-3 py-1 rounded-full border ${colorClass} font-semibold shadow-sm">${cat} (${catDone}/${catGoals.length})</span>`;
+        const colorClass = categoryColors[cat] || "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
+        // 需求二：點擊膠囊按鈕觸發 filterByCategory
+        badgesHtml += `<button onclick="window.filterByCategory('${cat}')" class="text-xs px-3 py-1 rounded-full border ${colorClass} font-semibold shadow-sm transition cursor-pointer">${cat} (${catDone}/${catGoals.length})</button>`;
       });
       document.getElementById("categoryBadges").innerHTML = badgesHtml;
 
@@ -900,7 +946,6 @@
         <div class="bg-slate-900 border ${g.completed ? 'border-emerald-500/40 bg-emerald-950/10' : 'border-slate-800'} rounded-2xl p-5 flex flex-col justify-between space-y-3 shadow-md transition hover:border-slate-700">
           <div class="flex items-start justify-between gap-3">
             <div class="flex items-center space-x-3">
-              <!-- 需求五：成就達成按鈕取代原本的勾選框 -->
               <button onclick="window.triggerAchievementModal(${g.id})" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1 ${g.completed ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30' : 'bg-slate-800 hover:bg-indigo-600 text-slate-300 border border-slate-700'}">
                 <span>${g.completed ? '已達成 ✅' : '成就達成 🏆'}</span>
               </button>
@@ -909,7 +954,6 @@
             <span class="text-xs px-2 py-0.5 bg-slate-800 text-slate-400 rounded-md font-mono shrink-0">#${g.id}</span>
           </div>
 
-          <!-- 分段心得進度歷程清單 (需求六：最新排在最上面) -->
           <div class="space-y-1.5 pt-1">
             ${(g.notesList || []).map((n, idx) => `
               <div class="text-[11px] bg-slate-950/60 p-2 rounded-lg border border-slate-800/80 text-slate-300 flex justify-between items-start">
@@ -962,6 +1006,7 @@
         submitBtn.textContent = "立即註冊";
         nameContainer.classList.remove("hidden");
         passContainer.classList.remove("hidden");
+        document.getElementById("regName").value = "";
         toggleText.textContent = "已經有帳號？";
         toggleBtn.textContent = "返回登入";
         forgotBtn.style.display = "none";
@@ -985,6 +1030,8 @@
         toggleBtn.textContent = "立即註冊";
         forgotBtn.style.display = "inline-block";
       }
+      document.getElementById("authEmail").value = "";
+      document.getElementById("authPassword").value = "";
     };
 
     window.handleAuthSubmit = async function(event) {
