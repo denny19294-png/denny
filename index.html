@@ -1,1627 +1,215 @@
-<!DOCTYPE html>
-<html lang="zh-TW" class="h-full">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>邁向願景：100 項人生必做清單與多週期年度盤點</title>
-  
-  <!-- Inline SVG Favicon -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  updateProfile
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  collection, 
+  getDocs 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- html2pdf.js CDN for PDF export -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  
-  <!-- FontAwesome Icons CDN -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <!-- Google Fonts (Noto Sans TC & Inter) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+// ⚠️ 請務必替換為您在 Firebase Console 申請的真實 Config 資訊
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
 
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#f0f9ff',
-              100: '#e0f2fe',
-              500: '#0284c7',
-              600: '#0369a1',
-              700: '#075985',
-              900: '#0c4a6e',
-            }
-          },
-          fontFamily: {
-            sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
-          }
-        }
-      }
-    }
-  </script>
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-  <style>
-    body {
-      font-family: 'Inter', 'Noto Sans TC', sans-serif;
-    }
+let currentUser = null;
+let userPlans = {}; // 儲存該使用者所有的週期計畫
+let activePlanId = null;
+
+// ==========================================
+// 1. 雲端資料連動核心邏輯 (Firestore Sync)
+// ==========================================
+
+// 監聽登入狀態切換：換裝置/開啟網頁時自動載入該帳號資料
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    currentUser = user;
+    console.log("登入成功，使用者 UID:", user.uid);
     
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: rgba(0,0,0,0.05);
-      border-radius: 8px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: rgba(156, 163, 175, 0.5);
-      border-radius: 8px;
-    }
+    // 更新 UI 顯示使用者名稱/信箱
+    updateUserUI(user);
     
-    /* PDF Print and Export Styles */
-    @media print {
-      .no-print {
-        display: none !important;
-      }
-      .print-only {
-        display: block !important;
-      }
-      body {
-        background: white !important;
-        color: black !important;
-      }
-      section {
-        break-inside: avoid;
-      }
-    }
+    // 從雲端 Firestore 載入該帳號專屬的資料
+    await loadUserDataFromCloud(user.uid);
     
-    .print-only {
-      display: none;
-    }
+    // 隱藏登入遮罩，顯示主系統
+    document.getElementById("authOverlay").classList.add("hidden");
+  } else {
+    currentUser = null;
+    userPlans = {};
+    activePlanId = null;
+    console.log("未登入或已登出");
+    
+    // 顯示登入遮罩
+    document.getElementById("authOverlay").classList.remove("hidden");
+  }
+});
 
-    /* Toast animation styles */
-    .toast-enter {
-      transform: translateY(-100%);
-      opacity: 0;
-    }
-    .toast-show {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  </style>
-
-  <!-- Firebase Modular SDK Script -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, onSnapshot, query, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-    // 定義切換登入/註冊/忘記密碼視窗 (全域可用)
-    window.showAuthView = (view) => {
-      const loginForm = document.getElementById('form-login');
-      const regForm = document.getElementById('form-register');
-      const forgotForm = document.getElementById('form-forgot');
-      const title = document.getElementById('auth-title');
-      const subtitle = document.getElementById('auth-subtitle');
-
-      if (!loginForm || !regForm || !forgotForm) return;
-
-      loginForm.classList.add('hidden');
-      regForm.classList.add('hidden');
-      forgotForm.classList.add('hidden');
-      
-      if (view === 'login') {
-        loginForm.classList.remove('hidden');
-        if (title) title.innerText = '登入你的願景帳號';
-        if (subtitle) subtitle.innerText = '歡迎回來，繼續你的百項修煉';
-      } else if (view === 'register') {
-        regForm.classList.remove('hidden');
-        if (title) title.innerText = '建立專屬帳號';
-        if (subtitle) subtitle.innerText = '獨立雲端空間，多裝置自動同步';
-      } else if (view === 'forgot') {
-        forgotForm.classList.remove('hidden');
-        if (title) title.innerText = '重設密碼';
-        if (subtitle) subtitle.innerText = '請輸入信箱，我們將寄送重設連結';
-      }
-    };
-
-    window.continueAsGuest = () => {
-      document.getElementById('auth-overlay').classList.add('hidden');
-      const nameSpan = document.getElementById('user-display-name');
-      if (nameSpan) nameSpan.innerText = '👋 訪客';
-      updateSyncBadge("local");
-      window.initAppLogic();
-      if (window.showToast) window.showToast("已進入訪客體驗模式 (本機儲存)", "info");
-    };
-
-    // Global variable helpers
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'life-goals-app-2028';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-      apiKey: "demo-key",
-      authDomain: "demo-app.firebaseapp.com",
-      projectId: "demo-app",
-      storageBucket: "demo-app.appspot.com",
-      messagingSenderId: "123456789",
-      appId: "1:123456789:web:demo"
-    };
-    const customAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-    let app, auth, db;
-    let currentUser = null;
-    let unsubscribePlansListener = null;
-
-    window.FirebaseAppInstance = {
-      isCloudAvailable: false,
-      userUid: null,
-      savePlanToCloud: async (planData) => {},
-      deletePlanFromCloud: async (planId) => {}
-    };
-
-    try {
-      app = initializeApp(firebaseConfig);
-      auth = getAuth(app);
-      db = getFirestore(app);
-      window.FirebaseAppInstance.isCloudAvailable = true;
-    } catch(e) {
-      console.warn("Firebase initialization skipped or falling back to local storage:", e);
-    }
-
-    async function initAuth() {
-      setupAuthUIHandlers();
-
-      if (!window.FirebaseAppInstance.isCloudAvailable) {
-        updateSyncBadge("local");
-        window.initAppLogic();
-        return;
-      }
-
-      onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          currentUser = user;
-          window.FirebaseAppInstance.userUid = user.uid;
-          
-          const displayName = user.displayName || (user.email ? user.email.split('@')[0] : "訪客");
-          const nameSpan = document.getElementById('user-display-name');
-          if (nameSpan) nameSpan.innerText = `👋 ${displayName}`;
-          
-          updateSyncBadge("synced", user.uid);
-          document.getElementById('auth-overlay').classList.add('hidden');
-          setupCloudDataSync(user.uid);
-        } else {
-          if (customAuthToken) {
-            try {
-              await signInWithCustomToken(auth, customAuthToken);
-            } catch(err) {
-              console.error("Custom token failed, showing login UI:", err);
-              document.getElementById('auth-overlay').classList.remove('hidden');
-            }
-          } else {
-            document.getElementById('auth-overlay').classList.remove('hidden');
-          }
-        }
-      });
-    }
-
-    function setupAuthUIHandlers() {
-      // 登入事件
-      const formLogin = document.getElementById('form-login');
-      if (formLogin && !formLogin.dataset.bound) {
-        formLogin.dataset.bound = "true";
-        formLogin.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const submitBtn = document.getElementById('btn-login-submit');
-          const email = document.getElementById('login-email').value.trim();
-          const pwd = document.getElementById('login-password').value;
-
-          if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> <span>登入中...</span>';
-          }
-
-          try {
-            if (!auth || !window.FirebaseAppInstance.isCloudAvailable) {
-              throw new Error("Cloud auth unavailable");
-            }
-            await signInWithEmailAndPassword(auth, email, pwd);
-            if (window.showToast) window.showToast("登入成功！", "success");
-          } catch(err) {
-            console.error("Login error:", err);
-            let msg = "登入失敗，請檢查信箱與密碼。";
-            if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-              msg = "帳號或密碼錯誤，請重新確認。";
-            } else if (err.code === 'auth/invalid-email') {
-              msg = "電子信箱格式不正確。";
-            } else if (err.message === "Cloud auth unavailable" || (err.code && err.code.includes('api-key'))) {
-              msg = "雲端登入服務未連線，為您切換至訪客模式！";
-              window.continueAsGuest();
-              return;
-            }
-            if (window.showToast) window.showToast(msg, "error");
-          } finally {
-            if (submitBtn) {
-              submitBtn.disabled = false;
-              submitBtn.innerHTML = '<span>登入</span>';
-            }
-          }
-        });
-      }
-
-      // 註冊事件
-      const formRegister = document.getElementById('form-register');
-      if (formRegister && !formRegister.dataset.bound) {
-        formRegister.dataset.bound = "true";
-        formRegister.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const submitBtn = document.getElementById('btn-register-submit');
-          const name = document.getElementById('register-name').value.trim();
-          const email = document.getElementById('register-email').value.trim();
-          const pwd = document.getElementById('register-password').value;
-
-          if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> <span>建立帳號中...</span>';
-          }
-
-          try {
-            if (!auth || !window.FirebaseAppInstance.isCloudAvailable) {
-              throw new Error("Cloud auth unavailable");
-            }
-            const userCredential = await createUserWithEmailAndPassword(auth, email, pwd);
-            if (name && userCredential.user) {
-              await updateProfile(userCredential.user, { displayName: name });
-            }
-            if (window.showToast) window.showToast("帳號建立成功，已為您自動登入！", "success");
-          } catch(err) {
-            console.error("Register error:", err);
-            let msg = "註冊失敗：" + (err.message || "請重試");
-            if (err.code === 'auth/email-already-in-use') {
-              msg = "此電子信箱已被註冊，請直接登入。";
-            } else if (err.code === 'auth/invalid-email') {
-              msg = "電子信箱格式不正確。";
-            } else if (err.code === 'auth/weak-password') {
-              msg = "密碼太弱，請至少輸入 6 個字元。";
-            } else if (err.message === "Cloud auth unavailable" || (err.code && err.code.includes('api-key'))) {
-              msg = "雲端註冊服務未連線，為您切換至訪客模式！";
-              window.continueAsGuest();
-              return;
-            }
-            if (window.showToast) window.showToast(msg, "error");
-          } finally {
-            if (submitBtn) {
-              submitBtn.disabled = false;
-              submitBtn.innerHTML = '<span>建立帳號</span>';
-            }
-          }
-        });
-      }
-
-      // 忘記密碼事件
-      const formForgot = document.getElementById('form-forgot');
-      if (formForgot && !formForgot.dataset.bound) {
-        formForgot.dataset.bound = "true";
-        formForgot.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const submitBtn = document.getElementById('btn-forgot-submit');
-          const email = document.getElementById('forgot-email').value.trim();
-
-          if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> <span>發送中...</span>';
-          }
-
-          try {
-            if (!auth || !window.FirebaseAppInstance.isCloudAvailable) {
-              throw new Error("Cloud auth unavailable");
-            }
-            await sendPasswordResetEmail(auth, email);
-            if (window.showToast) window.showToast("密碼重設信件已寄出，請檢查信箱。", "success");
-            window.showAuthView('login');
-          } catch(err) {
-            let msg = "發送失敗，請確認信箱是否正確。";
-            if (window.showToast) window.showToast(msg, "error");
-          } finally {
-            if (submitBtn) {
-              submitBtn.disabled = false;
-              submitBtn.innerHTML = '<span>發送重設信件</span>';
-            }
-          }
-        });
-      }
-      
-      // 登出按鈕事件
-      const btnLogout = document.getElementById('btn-logout');
-      if (btnLogout && !btnLogout.dataset.bound) {
-        btnLogout.dataset.bound = "true";
-        btnLogout.addEventListener('click', async () => {
-          try {
-            if (auth && currentUser) {
-              await signOut(auth);
-            }
-            window.appData = { activePlanId: null, plans: [] };
-            document.getElementById('goals-container').innerHTML = '';
-            document.getElementById('user-display-name').innerText = '';
-            document.getElementById('auth-overlay').classList.remove('hidden');
-            if (window.showToast) window.showToast("已成功登出", "info");
-          } catch(err) {
-            console.error("Logout error", err);
-          }
-        });
-      }
-    }
-
-    function setupCloudDataSync(userId) {
-      if (!db || !userId) return;
-
-      const plansCollectionRef = collection(db, 'artifacts', appId, 'users', userId, 'plans');
-
-      if (unsubscribePlansListener) unsubscribePlansListener();
-
-      unsubscribePlansListener = onSnapshot(plansCollectionRef, (snapshot) => {
-        const cloudPlans = [];
-        snapshot.forEach(docSnap => {
-          cloudPlans.push({ id: docSnap.id, ...docSnap.data() });
-        });
-
-        if (window.handleCloudPlansSync) {
-          window.handleCloudPlansSync(cloudPlans);
-        }
-      }, (error) => {
-        console.error("Firestore onSnapshot error:", error);
-        updateSyncBadge("local");
-      });
-
-      window.FirebaseAppInstance.savePlanToCloud = async (planData) => {
-        if (!currentUser || !db) return;
-        updateSyncBadge("saving");
-        try {
-          const planDocRef = doc(db, 'artifacts', appId, 'users', userId, 'plans', planData.id);
-          await setDoc(planDocRef, planData, { merge: true });
-          updateSyncBadge("synced", currentUser.uid);
-        } catch (e) {
-          console.error("Cloud save failed:", e);
-          updateSyncBadge("error");
-        }
-      };
-
-      window.FirebaseAppInstance.deletePlanFromCloud = async (planId) => {
-        if (!currentUser || !db) return;
-        try {
-          const planDocRef = doc(db, 'artifacts', appId, 'users', userId, 'plans', planId);
-          await deleteDoc(planDocRef);
-        } catch(e) {
-          console.error("Cloud delete failed:", e);
-        }
-      };
-    }
-
-    function updateSyncBadge(status, uid = "") {
-      const badge = document.getElementById("sync-status-badge");
-      if (!badge) return;
-
-      if (status === "synced") {
-        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">雲端已連線 (帳號: ${uid.substring(0, 6)}...)</span>`;
-      } else if (status === "saving") {
-        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span><span class="text-xs text-amber-600 dark:text-amber-400 font-medium">儲存中...</span>`;
-      } else if (status === "error") {
-        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span><span class="text-xs text-rose-600 dark:text-rose-400 font-medium">儲存失敗 (離線)</span>`;
-      } else {
-        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-400"></span><span class="text-xs text-slate-500 dark:text-slate-400 font-medium">本機儲存模式</span>`;
-      }
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      initAuth();
+// 從雲端 Firestore 讀取資料
+async function loadUserDataFromCloud(uid) {
+  try {
+    const plansRef = collection(db, "users", uid, "plans");
+    const querySnapshot = await getDocs(plansRef);
+    
+    userPlans = {};
+    querySnapshot.forEach((docSnap) => {
+      userPlans[docSnap.id] = docSnap.data();
     });
-  </script>
-</head>
 
-<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-full flex flex-col transition-colors duration-200">
+    // 若雲端尚無資料，建立預設的 2028 年計畫
+    if (Object.keys(userPlans).length === 0) {
+      const defaultPlan = createNewPlanObject("2028年前必做100件事", "2028-12-31");
+      userPlans[defaultPlan.id] = defaultPlan;
+      await savePlanToCloud(defaultPlan);
+    }
 
-  <!-- Toast Notification Container -->
-  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
-
-  <!-- Confetti Canvas -->
-  <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
-
-  <!-- Auth Overlay (Login/Register/Forgot) -->
-  <div id="auth-overlay" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[100] flex items-center justify-center p-4 hidden no-print">
-    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-8 shadow-2xl border border-slate-200 dark:border-slate-700">
-      <div class="text-center mb-6">
-        <div class="text-5xl mb-4 bg-gradient-to-tr from-sky-500 to-indigo-600 bg-clip-text text-transparent inline-block">🎯</div>
-        <h2 class="text-2xl font-bold text-slate-800 dark:text-white" id="auth-title">登入你的願景帳號</h2>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-2" id="auth-subtitle">歡迎回來，繼續你的百項修煉</p>
-      </div>
-
-      <!-- Form Login -->
-      <form id="form-login" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">電子信箱</label>
-          <input type="email" id="login-email" required class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-800 dark:text-white">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">密碼</label>
-          <input type="password" id="login-password" required class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-800 dark:text-white">
-        </div>
-        <button type="submit" id="btn-login-submit" class="w-full py-3 mt-2 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-md transition flex items-center justify-center space-x-2">
-          <span>登入</span>
-        </button>
-        <div class="flex justify-between text-xs mt-4">
-          <button type="button" onclick="window.showAuthView('forgot')" class="text-sky-600 hover:text-sky-700 dark:text-sky-400">忘記密碼？</button>
-          <button type="button" onclick="window.showAuthView('register')" class="text-slate-500 hover:text-slate-700 dark:text-slate-400">沒有帳號？註冊一個</button>
-        </div>
-      </form>
-
-      <!-- Form Register -->
-      <form id="form-register" class="space-y-4 hidden">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">顯示名稱 (姓名/暱稱)</label>
-          <input type="text" id="register-name" required class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-800 dark:text-white">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">電子信箱</label>
-          <input type="email" id="register-email" required class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-800 dark:text-white">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">密碼 (至少6碼)</label>
-          <input type="password" id="register-password" required minlength="6" class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-800 dark:text-white">
-        </div>
-        <button type="submit" id="btn-register-submit" class="w-full py-3 mt-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold rounded-xl shadow-md transition flex items-center justify-center space-x-2">
-          <span>建立帳號</span>
-        </button>
-        <div class="text-center text-xs mt-4">
-          <button type="button" onclick="window.showAuthView('login')" class="text-slate-500 hover:text-slate-700 dark:text-slate-400">已有帳號？返回登入</button>
-        </div>
-      </form>
-
-      <!-- Form Forgot -->
-      <form id="form-forgot" class="space-y-4 hidden">
-        <p class="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">請輸入您的註冊信箱，我們將寄送密碼重設連結給您，請根據信件指示重設密碼。</p>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">電子信箱</label>
-          <input type="email" id="forgot-email" required class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-800 dark:text-white">
-        </div>
-        <button type="submit" id="btn-forgot-submit" class="w-full py-3 mt-2 bg-slate-700 hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500 text-white font-semibold rounded-xl shadow-md transition flex items-center justify-center space-x-2">
-          <span>發送重設信件</span>
-        </button>
-        <div class="text-center text-xs mt-4">
-          <button type="button" onclick="window.showAuthView('login')" class="text-slate-500 hover:text-slate-700 dark:text-slate-400">返回登入</button>
-        </div>
-      </form>
-
-      <!-- Guest / Offline Entry Option -->
-      <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700/60 text-center">
-        <button type="button" onclick="window.continueAsGuest()" class="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 underline decoration-dotted underline-offset-4 flex items-center justify-center space-x-1 mx-auto transition">
-          <i class="fa-solid fa-user-check"></i>
-          <span>先不登入，以訪客身份直接體驗 (本機紀錄)</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <header class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30 no-print">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-md font-bold text-lg">
-          🎯
-        </div>
-        <div>
-          <div class="flex items-center space-x-2">
-            <h1 class="text-base sm:text-lg font-bold bg-gradient-to-r from-sky-600 to-indigo-600 dark:from-sky-400 dark:to-indigo-400 bg-clip-text text-transparent">
-              願景與 100 項人生必做清單
-            </h1>
-          </div>
-          <div class="flex items-center space-x-2 mt-0.5">
-            <span id="user-display-name" class="text-xs font-semibold text-slate-700 dark:text-slate-300"></span>
-            <div id="sync-status-badge" class="flex items-center space-x-1">
-              <span class="w-2 h-2 rounded-full bg-slate-400"></span>
-              <span class="text-xs text-slate-500">載入中...</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Plan Switcher & Global Header Actions -->
-      <div class="flex items-center space-x-2 sm:space-x-3">
-        
-        <!-- Active Target Period Plan Selector Dropdown -->
-        <div class="relative inline-block text-left">
-          <div class="flex items-center space-x-1 bg-slate-100 dark:bg-slate-700 p-1 rounded-xl border border-slate-200 dark:border-slate-600">
-            <i class="fa-solid fa-calendar-days text-sky-500 pl-2 text-xs"></i>
-            <select id="plan-selector" class="bg-transparent text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 focus:outline-none pr-2 py-1 cursor-pointer">
-              <!-- Dynamically populated target plans -->
-            </select>
-            <button id="btn-new-plan" class="px-2 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-medium transition flex items-center space-x-1" title="建立全新目標執行週期">
-              <i class="fa-solid fa-plus text-[10px]"></i>
-              <span class="hidden sm:inline">新週期</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Theme Toggle -->
-        <button id="theme-toggle" class="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition" title="切換深淺模式">
-          <i class="fa-solid fa-moon dark:hidden"></i>
-          <i class="fa-solid fa-sun hidden dark:block text-amber-400"></i>
-        </button>
-
-        <!-- Reset & Randomize 100 Goals -->
-        <button id="btn-reset-goals" class="p-2 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg text-sm flex items-center space-x-1" title="重新抽取 100 項新清單">
-          <i class="fa-solid fa-shuffle"></i>
-          <span class="hidden md:inline">重設/換100項</span>
-        </button>
-
-        <!-- Backup & Download Actions -->
-        <button id="btn-export-json" class="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-sm flex items-center space-x-1" title="下載 JSON 備份檔">
-          <i class="fa-solid fa-download"></i>
-          <span class="hidden lg:inline">備份</span>
-        </button>
-        <button id="btn-import-json" class="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-sm flex items-center space-x-1" title="匯入 JSON 備份檔">
-          <i class="fa-solid fa-upload"></i>
-          <span class="hidden lg:inline">匯入</span>
-        </button>
-        <input type="file" id="input-import-file" class="hidden" accept=".json">
-
-        <!-- Download PDF -->
-        <button id="btn-export-pdf" class="px-3.5 py-2 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white font-medium rounded-xl text-sm shadow-md transition flex items-center space-x-1.5">
-          <i class="fa-solid fa-file-pdf"></i>
-          <span class="hidden sm:inline">匯出 PDF</span>
-        </button>
-
-        <!-- Logout Button -->
-        <button id="btn-logout" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg text-sm flex items-center transition" title="登出帳號">
-          <i class="fa-solid fa-arrow-right-from-bracket"></i>
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8" id="export-container">
+    // 預設選取第一個計畫或上次選取的計畫
+    activePlanId = Object.keys(userPlans)[0];
     
-    <!-- Printable Header Banner (Only visible in PDF export) -->
-    <div class="print-only mb-6 border-b pb-4">
-      <h1 class="text-3xl font-bold text-slate-900" id="pdf-export-title">人生 100 項必做事項與盤點報告</h1>
-      <p class="text-sm text-slate-600 mt-1">匯出日期：<span id="pdf-export-date"></span> | 目標期限：<span id="pdf-export-target-date"></span> | 完成進度：<span id="pdf-export-progress">0%</span></p>
-    </div>
+    // 渲染畫面
+    renderPlanSelector();
+    renderActivePlan();
+  } catch (error) {
+    console.error("雲端資料載入失敗:", error);
+    alert("雲端資料載入失敗，請檢查網路連線。");
+  }
+}
 
-    <!-- Dashboard Header Visualizer / Canvas Stats -->
-    <section class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200/80 dark:border-slate-700/80">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
-        
-        <!-- Interactive Canvas Progress Circle -->
-        <div class="flex flex-col items-center justify-center space-y-2">
-          <div class="relative w-44 h-44 flex items-center justify-center">
-            <canvas id="progress-canvas" width="180" height="180" class="w-44 h-44"></canvas>
-            <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
-              <span id="completion-percentage" class="text-3xl font-extrabold text-slate-800 dark:text-white">0%</span>
-              <span id="completion-count-text" class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">0 / 100 已完成</span>
-            </div>
-          </div>
-        </div>
+// 儲存單一計畫至雲端 Firestore
+async function savePlanToCloud(plan) {
+  if (!currentUser) return;
+  try {
+    const planDocRef = doc(db, "users", currentUser.uid, "plans", plan.id);
+    await setDoc(planDocRef, plan, { merge: true });
+    console.log(`計畫 ${plan.id} 已同步更新至雲端`);
+  } catch (error) {
+    console.error("同步至雲端失敗:", error);
+  }
+}
 
-        <!-- Progress Overview Info -->
-        <div class="space-y-4 lg:col-span-2">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <span id="active-plan-tag" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300">
-                🎯 目標期限：2028 年 12 月 31 日前
-              </span>
-              <h2 id="active-plan-title" class="text-xl font-bold text-slate-800 dark:text-white mt-2">
-                2028 前必做的 100 件精選事項
-              </h2>
-            </div>
-            <div class="text-right">
-              <span class="text-xs text-slate-500 dark:text-slate-400">距離目標截止剩餘</span>
-              <div id="countdown-days" class="text-2xl font-black text-indigo-600 dark:text-indigo-400">--- 天</div>
-            </div>
-          </div>
+// ==========================================
+// 2. 使用者操作事件 (打勾、修改心得、新增週期)
+// ==========================================
 
-          <!-- Progress Bars by Status -->
-          <div class="space-y-2">
-            <div class="flex justify-between text-xs font-medium text-slate-600 dark:text-slate-400">
-              <span>當前執行階段進度</span>
-              <span id="progress-text-detail">已達成 0 項，剩餘 100 項</span>
-            </div>
-            <div class="w-full bg-slate-100 dark:bg-slate-700 h-3 rounded-full overflow-hidden flex">
-              <div id="main-progress-bar" class="bg-gradient-to-r from-sky-500 to-indigo-600 h-full transition-all duration-500" style="width: 0%"></div>
-            </div>
-          </div>
+// 當使用者勾選/取消勾選目標時
+window.toggleGoal = async function(goalId) {
+  const plan = getActivePlan();
+  if (!plan) return;
 
-          <!-- Category Quick Breakdown Pills -->
-          <div id="category-pills" class="flex flex-wrap gap-1.5 pt-2">
-            <!-- Dynamic Category Pills inserted here -->
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- Search & Filter Controls Bar -->
-    <section class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-200/80 dark:border-slate-700/80 space-y-4 no-print">
-      <div class="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
-        
-        <!-- Search -->
-        <div class="relative flex-grow max-w-md">
-          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-          <input type="text" id="search-input" placeholder="搜尋關鍵字、心得備註..." class="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition">
-        </div>
-
-        <!-- Filter Controls -->
-        <div class="flex flex-wrap items-center gap-2">
-          <!-- Category Dropdown -->
-          <select id="category-filter" class="px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition">
-            <option value="ALL">全部領域 (10大類別)</option>
-          </select>
-
-          <!-- Status Dropdown -->
-          <select id="status-filter" class="px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition">
-            <option value="ALL">全部狀態</option>
-            <option value="PENDING">未完成</option>
-            <option value="COMPLETED">已打勾完成</option>
-          </select>
-
-          <!-- Add Custom Goal Button -->
-          <button id="btn-add-custom" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-medium transition flex items-center space-x-1">
-            <i class="fa-solid fa-plus text-xs"></i>
-            <span>自訂項目</span>
-          </button>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- Checklist Canvas Section -->
-    <section class="space-y-4">
-      <div class="flex items-center justify-between px-1">
-        <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center space-x-2">
-          <span>百項修煉清單列表</span>
-          <span id="filtered-count" class="text-xs bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-300">100</span>
-        </h3>
-        <div class="text-xs text-slate-500 dark:text-slate-400">
-          勾選即可自動帶入今日日期，並可寫下體驗心得
-        </div>
-      </div>
-
-      <!-- The Grid of 100 Items -->
-      <div id="goals-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Goal items injected dynamically -->
-      </div>
-    </section>
-
-    <!-- Goal Period Annual Reflection Canvas Section -->
-    <section class="bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-900 text-white rounded-2xl p-6 md:p-8 shadow-xl space-y-6">
-      <div class="border-b border-indigo-500/30 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <span class="inline-block px-3 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-semibold rounded-full mb-2">
-            Annual Reflection Canvas
-          </span>
-          <h2 class="text-2xl font-bold flex items-center gap-2">
-            <i class="fa-solid fa-feather-pointed text-indigo-400"></i>
-            <span id="reflection-title-text">當前執行期終點總結與盤點心得</span>
-          </h2>
-          <p class="text-sm text-slate-300 mt-1">
-            當到達目標期限前，請在此靜心寫下您的回顧、感悟與成果盤點。
-          </p>
-        </div>
-        <div class="text-xs bg-white/10 px-3 py-2 rounded-xl backdrop-blur-sm self-start md:self-auto text-slate-300">
-          <i class="fa-solid fa-floppy-disk mr-1 text-emerald-400"></i> 內容將自動即時儲存至雲端
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        <!-- Reflection Field 1: Top 3 Achievements -->
-        <div class="space-y-2 bg-white/5 p-4 rounded-xl border border-white/10">
-          <label class="block text-sm font-semibold text-indigo-200 flex items-center gap-2">
-            <i class="fa-solid fa-trophy text-amber-400"></i>
-            <span>1. 這段時間中最令自己驕傲的 3 大成就或突破：</span>
-          </label>
-          <textarea id="reflection-achievements" rows="4" placeholder="例如：完成了第一次半程馬拉松、建立穩定的副業被動收入、帶父母去了日本旅遊..." class="w-full bg-slate-950/60 border border-slate-700 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 custom-scrollbar"></textarea>
-        </div>
-
-        <!-- Reflection Field 2: Insights and Learning -->
-        <div class="space-y-2 bg-white/5 p-4 rounded-xl border border-white/10">
-          <label class="block text-sm font-semibold text-indigo-200 flex items-center gap-2">
-            <i class="fa-solid fa-lightbulb text-yellow-300"></i>
-            <span>2. 未完成事項的原因分析與最寶貴的學習體悟：</span>
-          </label>
-          <textarea id="reflection-learnings" rows="4" placeholder="記錄那些未完成的項目帶來了什麼啟示？學會了如何重新調整優先順序與心態..." class="w-full bg-slate-950/60 border border-slate-700 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 custom-scrollbar"></textarea>
-        </div>
-
-        <!-- Reflection Field 3: Letter to Future Self -->
-        <div class="space-y-2 bg-white/5 p-4 rounded-xl border border-white/10 md:col-span-2">
-          <label class="block text-sm font-semibold text-indigo-200 flex items-center gap-2">
-            <i class="fa-solid fa-envelope-open-text text-sky-400"></i>
-            <span>3. 站在當前週期的終點與全新的起點，給未來的自己一封信與總體心得：</span>
-          </label>
-          <textarea id="reflection-letter" rows="5" placeholder="寫給迎向全新階段的自己... 感謝這段時間以來堅持不懈的努力，未來的我準備好了！" class="w-full bg-slate-950/60 border border-slate-700 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 custom-scrollbar"></textarea>
-        </div>
-
-      </div>
-    </section>
-
-  </main>
-
-  <!-- Create New Target Plan Modal -->
-  <div id="modal-new-plan" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden no-print">
-    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
-      <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-3">
-        <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-          <i class="fa-solid fa-bullseye text-sky-500"></i>
-          <span>建立新目標執行週期</span>
-        </h3>
-        <button id="btn-close-plan-modal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-      </div>
-
-      <div class="space-y-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">目標計畫名稱</label>
-          <input type="text" id="new-plan-title" placeholder="例如：2027 年底人生重大突破" class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">目標完成截止日期</label>
-          <input type="date" id="new-plan-target-date" class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">100 項目標生成方式</label>
-          <select id="new-plan-generation-type" class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
-            <option value="RANDOM">🎲 隨機自動抽取 100 項全新目標組合 (推薦)</option>
-            <option value="DEFAULT">📋 載入經典預設 100 項目標</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="flex justify-end space-x-2 pt-2">
-        <button id="btn-cancel-plan-modal" class="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl">取消</button>
-        <button id="btn-save-new-plan" class="px-4 py-2 text-sm font-medium bg-sky-600 hover:bg-sky-700 text-white rounded-xl shadow-md transition">建立新計畫</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Add Custom Goal Modal -->
-  <div id="modal-add" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden no-print">
-    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
-      <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-3">
-        <h3 class="text-lg font-bold text-slate-800 dark:text-white">新增自訂必做事項</h3>
-        <button id="btn-close-modal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-      </div>
-
-      <div class="space-y-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">領域類別</label>
-          <select id="modal-category" class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm">
-            <!-- Categories injected by JS -->
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">目標項目內容</label>
-          <input type="text" id="modal-title" placeholder="例如：學會做特調手沖咖啡..." class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
-        </div>
-      </div>
-
-      <div class="flex justify-end space-x-2 pt-2">
-        <button id="btn-cancel-modal" class="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl">取消</button>
-        <button id="btn-save-custom" class="px-4 py-2 text-sm font-medium bg-sky-600 hover:bg-sky-700 text-white rounded-xl shadow-md transition">確認新增</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Reset / Randomize Confirmation Modal -->
-  <div id="modal-reset-confirm" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden no-print">
-    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 text-center">
-      <div class="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto text-xl">
-        <i class="fa-solid fa-shuffle"></i>
-      </div>
-      <h3 class="text-lg font-bold text-slate-800 dark:text-white">重設並更換 100 項必做事項？</h3>
-      <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-        您可以選擇重設目前打勾狀態，或是從大題庫中**隨機重新抽取全新的 100 項目標組合**！
-      </p>
-      <div class="flex flex-col space-y-2 pt-2">
-        <button id="btn-confirm-randomize" class="w-full py-2.5 text-xs font-semibold bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white rounded-xl shadow-md transition">
-          🎲 重新抽取全新的 100 項目標 (不重複組合)
-        </button>
-        <button id="btn-confirm-reset-progress" class="w-full py-2 text-xs font-medium bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-xl transition">
-          🔄 保留目前項目，僅清空完成勾選狀態
-        </button>
-        <button id="btn-cancel-reset" class="w-full py-2 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400">
-          取消
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Footer -->
-  <footer class="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-6 mt-12 no-print">
-    <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 dark:text-slate-400 space-y-1">
-      <p>邁向願景：100 項人生必做清單與多週期年度盤點 | 隨時瀏覽、紀錄與回顧</p>
-      <p class="text-slate-400 dark:text-slate-500">支援雲端自動同步與多目標執行週期管理</p>
-    </div>
-  </footer>
-
-  <script>
-    const CATEGORIES = {
-      CAREER: { name: "職涯發展", icon: "fa-briefcase", color: "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800" },
-      WEALTH: { name: "理財投資", icon: "fa-coins", color: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800" },
-      HEALTH: { name: "健康運動", icon: "fa-heart-pulse", color: "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800" },
-      LEARNING: { name: "自我成長", icon: "fa-graduation-cap", color: "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800" },
-      TRAVEL: { name: "旅行探索", icon: "fa-plane", color: "bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800" },
-      RELATIONSHIP: { name: "人際家庭", icon: "fa-users", color: "bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 border-pink-200 dark:border-pink-800" },
-      LIFE: { name: "生活品味", icon: "fa-mug-hot", color: "bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800" },
-      CREATIVITY: { name: "創作作品", icon: "fa-palette", color: "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800" },
-      MINDFULNESS: { name: "心靈靈性", icon: "fa-spa", color: "bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800" },
-      CONTRIBUTION: { name: "社會奉獻", icon: "fa-hand-holding-heart", color: "bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800" }
-    };
-
-    // EXPANDED GOAL POOL FOR DYNAMIC RANDOM SAMPLING (200+ distinct goal options)
-    const GOAL_POOL = {
-      CAREER: [
-        "建立個人的專業作品集網站或數位履歷", "獲得一項高含金量或專業領域認證/證照", "主導完成一個跨部門或創新型重大專案", "升遷、轉職至理想職位或完成一次職涯跳躍", "擔任一次業界研討會、講座或內部分享會主講人",
-        "尋找一位職涯導師（Mentor）或成為他人的導師", "建立優質專業 networking 圈（認識 10 位領域優秀同仁）", "學習並熟練運用 AI 工具提升 50% 工作效率", "啟動一個個人副業或自由職業業務", "達成個人年度績效考評（OKRs/KPIs）頂尖評等",
-        "出版或發表一篇業界專業文章/白皮書", "參與一次創業競賽或內部創新孵化提案", "建立一套自動化工作流程系統", "指導並帶領一名新手同事取得長足進步", "獨立談成一次重大業務合作或合約"
-      ],
-      WEALTH: [
-        "建立緊急預備金（至少 6 個月生活費）", "定期定額投資 ETF 或高質量資產，建立被動收入機制", "完成年度資產盤點與財務自由淨值規劃", "閱讀 5 本經典理財/投資著作", "徹底清理不必要訂閱服務與無效消費習慣",
-        "嘗試打造一種自動化或半自動化收益管道", "為自己與家人配置足夠且合適的保險保障", "實現一個重要的財務儲蓄里程碑", "建立系統化記帳與預算控管習慣（持續 100 天以上）", "了解基本稅務知識並規劃合規節稅方案",
-        "嘗試資產多元化配置（股票、房產、債券等）", "達成股息或利息被動收入覆蓋單月基礎生活費", "進行一次完整的個人財務健康診斷", "學習解讀上市公司的財務報表", "實現個人無消費借貸（清償卡債與信貸）"
-      ],
-      HEALTH: [
-        "養成每週規律運動 3 次（每次 30 分鐘以上）習慣", "挑戰並完成一次半程馬拉松（21K）或 10K 路跑", "達成理想體重與體脂肪率目標", "完成一次全身深度健康檢查並追蹤指標", "改善睡眠品質，建立每晚固定時間入睡的作息",
-        "學習一項全新的運動（如攀岩、滑雪、衝浪、瑜珈等）", "進行連續 30 天無糖/低糖飲食挑戰", "每日飲水量達到 2000c.c. 以上並維持 3 個月", "學習一套專業伸展或姿態矯正方法", "完成一次天數為 3 天以上的健康飲食淨化體驗",
-        "參加一次徒步越野挑戰（登山 hiking 超過 15 公里）", "學會正確重訓動作與肌力訓練基礎", "連續 30 天早起不拉窗簾進行晨間日光浴", "戒掉一項長期對身體不健康的壞習慣", "學會一項游泳招式並連續游完 1000 公尺"
-      ],
-      LEARNING: [
-        "精通一門外語的口語溝通（如英文、日文、西文等）", "每年閱讀至少 24 本好書並撰寫讀書心得", "學習一門程式語言或自動化腳本（如 Python, JS 等）", "參加一場實體工作坊或短期訓練營", "學習一項樂器並能完整演奏至少 3 首曲目",
-        "熟練掌握心智圖與卡片盒筆記法（Obsidian/Notion 等）", "學習基礎視覺設計、修圖或影片剪輯技巧", "研讀心理學或行為經濟學相關基礎著作", "報名參加一門完整線上深度課程並取得結業證書", "挑戰一天不接觸數位螢幕（Digital Detox）的沉浸體驗",
-        "學習經典哲學史與批判性思考方法", "掌握速讀與高效學習記憶技巧", "聽完 50 集高質量的知識型 Podcast 節目", "學習基本的邏輯學與決策模型框架", "挑戰用外語觀看完整無字幕紀錄片"
-      ],
-      TRAVEL: [
-        "前往一個從未去過的國家或地區自助旅行", "體驗一次獨自一人旅行（Solo Travel）至少 3 天", "規劃一次深度鐵路或公路環島旅行", "在露營區享受無光害星空與野營樂趣", "參觀世界級博物館或歷史文化遺產景點",
-        "體驗搭乘熱氣球或高空跳傘/飛行傘", "到海邊體驗一次潛水或水上滑板", "入住一次具有歷史特色或頂級奢華設計的旅宿", "前往高山步道挑戰百岳或著名登山步道登頂", "解鎖一次米其林餐廳的極致美食體驗",
-        "體驗一次長途過夜臥舖列車旅程", "參加一次當地的傳統節慶或文化慶典", "前往極光或雪國景點體驗自然震撼", "在異國傳統市場學習做當地菜餚", "探訪一處未經過度開發的秘境自然保護區"
-      ],
-      RELATIONSHIP: [
-        "帶父母或家人進行一次多天數國內外全家旅行", "與很久沒聯絡的知心老朋友重新聚會聯繫", "每月安排一次無手機干擾的深度高品質陪伴", "寫信或親手做禮物感謝生命中對自己重要的人", "建立一個固定的同好社群或利基興趣交流小組",
-        "勇敢解開過往心中的某段誤會或心結", "學習非暴力溝通（NVC）並落實於日常人際關係", "舉辦一次溫馨的居家派對或聚會招待親友", "陪同家人完成一個他們長久以來的心願", "在人際交往中學會劃清健康界線與優雅拒絕",
-        "記錄家人的口述歷史與珍貴回憶錄", "每年送給重要夥伴一份意想不到的驚喜禮物", "參與或舉辦一次高質量的同學會/同會聚集", "建立專屬親密關係的每週定期約會夜", "學會傾聽不急於批判的人生交流智慧"
-      ],
-      LIFE: [
-        "徹底進行居家斷捨離，打造極簡舒適的生活空間", "建立專屬自己的晨間儀式（Morning Routine）", "學習烘焙或能烹飪出 5 道拿手招牌美味料理", "種植並照顧好植物/盆栽，體驗綠色植物的療癒", "打造一個舒適且符合人體工學的高效率工作/書房空間",
-        "培養挑選優質咖啡豆與手沖咖啡的品味", "解鎖一次質感展覽、音樂會或舞台劇欣賞", "為自己購買一件高品質且能陪伴長久的心頭好物", "嘗試一次全黑暗或極靜環境中的自我放鬆體驗", "定期紀錄生活影音 Vlog 或文字日誌（累積 50 篇以上）",
-        "學習葡萄酒或精釀啤酒的品飲導覽", "將個人生活空間佈置成喜歡的美學風格", "嘗試連續 30 天做手作早餐", "建立個人專屬的香氛與生活療癒清單", "挑戰極簡生活 1 個月（不購買非必需品）"
-      ],
-      CREATIVITY: [
-        "寫下並發表一篇高價值的長文或系列主題文章", "製作並發行屬於自己的 Podcast 音頻節目或影片", "拍攝並整理一輯主題攝影作品集", "設計並印製一份專屬自己的名片、手帳或週邊", "嘗試手作工藝品（如陶藝、木工、皮件等）",
-        "撰寫一部短篇小說、電子書或知識小冊子", "繪製一幅油畫、水彩畫或數位插畫作品", "設計並架設一個個人的 Side Project 網站或 App", "為自己或親友創作出一段音樂、詩歌或專屬禮物", "參加一次創客（Maker）或文創市集展出",
-        "開創一個經營個人品牌的社群頻道", "完成一次個人主題展覽或相片展示", "嘗試做一次自製手作皮革皮夾", "錄製一首自己演唱或演奏的單曲錄音", "設計並印製一本屬於自己的年度生活相冊"
-      ],
-      MINDFULNESS: [
-        "養成每日正念冥想 10 分鐘的習慣（持續 60 天以上）", "參加一次靜心營或數日默觀/瑜珈退修體驗", "建立每日感恩日記習慣，記錄 3 件值得感恩的小事", "閱讀 3 本心靈成長或哲學經典名著", "學會覺察情緒並建立正向情緒調節與紓壓機制",
-        "完成一次個人年度價值觀排序與人生願景梳理", "嘗試在自然大自然中獨處半天，聆聽內心聲音", "學習原諒與釋懷過往的不完美，達成自我和解", "維持專注當下的生活心態，減少無謂焦慮", "建立一個隨時能讓自己靜心沉澱的小儀式",
-        "練習『無做任何事』的 30 分鐘純粹獨處", "寫一封信給過去受傷的自己並優雅道別", "體驗一次正念飲食（Mindful Eating）", "建立個人面對挫折與壓力時的自我安撫清單", "學習放鬆全身肌肉的深層睡眠呼吸法"
-      ],
-      CONTRIBUTION: [
-        "參與一次志工服務或公益慈善團體志工活動", "定期捐款或捐贈物資給需要的公益機構/弱勢團體", "捐血 2 次以上或完成器官/骨髓捐贈意願登記", "無償分享自己的專業知識或技能給需要的群眾", "落實減塑與環保生活，減少個人碳足跡",
-        "幫助身邊一位朋友或後輩達成他心中的小目標", "支持在地小農、獨立書店或本土文創品牌", "發起或參與一次淨灘/淨山環保行動", "照顧浪浪或支持動物保護團體專案", "傳播正能量，成為讓身邊世界變得稍微更好一點的人",
-        "發起一次募集物資支援偏鄉學校行動", "為公共領域（如 Wikipedia / 開源專案）貢獻內容", "輔導弱勢家庭學童課業或生活技能", "植樹或參與綠化環境永續專案", "在日常生活中每天對陌生人給予一個善意笑容或鼓勵"
-      ]
-    };
-
-    // Global App State with Multi-Plan Support
-    const LOCAL_STORAGE_KEY = 'life_goals_plans_manager_v2';
+  const goal = plan.goals.find(g => g.id === goalId);
+  if (goal) {
+    goal.completed = !goal.completed;
+    goal.completedAt = goal.completed ? new Date().toISOString() : null;
     
-    window.appData = {
-      activePlanId: null,
-      plans: []
-    };
+    // 重新渲染畫面
+    renderActivePlan();
+    
+    // 自動即時連動同步至雲端
+    await savePlanToCloud(plan);
+  }
+};
 
-    function generateRandom100Goals() {
-      const goals = [];
-      let globalId = 1;
+// 當使用者修改年度心得/畫布時
+window.saveReflections = async function(field, value) {
+  const plan = getActivePlan();
+  if (!plan) return;
 
-      Object.keys(CATEGORIES).forEach(catKey => {
-        const pool = GOAL_POOL[catKey] || [];
-        // Shuffle pool
-        const shuffled = [...pool].sort(() => 0.5 - Math.random());
-        // Pick top 10 items
-        const selected = shuffled.slice(0, 10);
+  if (!plan.reflections) plan.reflections = {};
+  plan.reflections[field] = value;
+  
+  // 自動即時連動同步至雲端
+  await savePlanToCloud(plan);
+};
 
-        selected.forEach(title => {
-          goals.push({
-            id: globalId++,
-            category: catKey,
-            title: title,
-            completed: false,
-            completedDate: "",
-            note: ""
-          });
-        });
-      });
-
-      return goals;
+// 取得當前作用中的計畫 (防呆與安全取得)
+function getActivePlan() {
+  if (!activePlanId || !userPlans[activePlanId]) {
+    const keys = Object.keys(userPlans);
+    if (keys.length > 0) {
+      activePlanId = keys[0];
+    } else {
+      return null;
     }
+  }
+  return userPlans[activePlanId];
+}
 
-    window.generateDefault2028Plan = function() {
-      return {
-        id: "plan_" + Date.now(),
-        title: "新願景目標計畫",
-        targetDate: "2028-12-31",
-        createdAt: new Date().toISOString(),
-        goals: generateRandom100Goals(),
-        reflections: { achievements: "", learnings: "", letter: "" }
-      };
-    };
+// ==========================================
+// 3. 帳號註冊 / 登入 / 忘記密碼處理
+// ==========================================
 
-    window.initAppLogic = function() {
-      if (!window.FirebaseAppInstance || !window.FirebaseAppInstance.isCloudAvailable) {
-        loadStateFromLocalStorage();
-      }
-      window.renderPlanSelector();
-      window.renderActivePlan();
-    };
+// 登入
+window.handleLogin = async function(email, password) {
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (error) {
+    alert("登入失敗：" + getErrorMessage(error.code));
+  }
+};
 
-    window.handleCloudPlansSync = function(cloudPlans) {
-      if (cloudPlans && cloudPlans.length > 0) {
-        window.appData.plans = cloudPlans;
-        if (!window.appData.plans.find(p => p.id === window.appData.activePlanId)) {
-          window.appData.activePlanId = window.appData.plans[0].id;
-        }
-      } else {
-        // 該帳號首次登入時，產生一份全新專屬計畫並存入雲端
-        const defaultPlan = window.generateDefault2028Plan();
-        window.appData.plans = [defaultPlan];
-        window.appData.activePlanId = defaultPlan.id;
-        if (window.FirebaseAppInstance.savePlanToCloud) {
-          window.FirebaseAppInstance.savePlanToCloud(defaultPlan);
-        }
-      }
-      // 不儲存到本機，避免切換帳號資料外流，全憑雲端串接
-      saveToLocalStorageLocalOnly();
-      window.renderPlanSelector();
-      window.renderActivePlan();
-    };
-
-    function loadStateFromLocalStorage() {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        try {
-          window.appData = JSON.parse(saved);
-        } catch(e) {
-          console.error("Local load error:", e);
-        }
-      }
-
-      if (!window.appData.plans || window.appData.plans.length === 0) {
-        window.appData.plans = [window.generateDefault2028Plan()];
-        window.appData.activePlanId = window.appData.plans[0].id;
-        saveState();
-      }
+// 註冊
+window.handleRegister = async function(name, email, password) {
+  try {
+    const res = await createUserWithEmailAndPassword(auth, email, password);
+    if (name) {
+      await updateProfile(res.user, { displayName: name });
     }
-
-    function saveToLocalStorageLocalOnly() {
-      // 若已登入雲端，則停用 LocalStorage，確保多帳號在同設備不會互相污染
-      if (window.FirebaseAppInstance && window.FirebaseAppInstance.isCloudAvailable && window.FirebaseAppInstance.userUid) {
-        return;
-      }
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.appData));
-    }
-
-    function saveState() {
-      saveToLocalStorageLocalOnly();
-      
-      const activePlan = getActivePlan();
-      if (activePlan && window.FirebaseAppInstance && window.FirebaseAppInstance.isCloudAvailable) {
-        window.FirebaseAppInstance.savePlanToCloud(activePlan);
-      }
-
-      renderCanvasStats();
-      renderCategoryPills();
-    }
-
-    function getActivePlan() {
-      return window.appData.plans.find(p => p.id === window.appData.activePlanId) || window.appData.plans[0];
-    }
-
-    window.renderPlanSelector = function() {
-      const selector = document.getElementById("plan-selector");
-      if (!selector) return;
-
-      selector.innerHTML = "";
-
-      window.appData.plans.forEach(plan => {
-        const opt = document.createElement("option");
-        opt.value = plan.id;
-        opt.textContent = `${plan.title} (截止: ${plan.targetDate})`;
-        if (plan.id === window.appData.activePlanId) opt.selected = true;
-        selector.appendChild(opt);
-      });
-    };
-
-    window.renderActivePlan = function() {
-      const plan = getActivePlan();
-      if (!plan) return;
-
-      const reflectionTitleText = document.getElementById("reflection-title-text");
-      if (reflectionTitleText) {
-        reflectionTitleText.innerText = `${plan.title} - 盤點心得`;
-      }
-
-      updateCountdown(plan.targetDate);
-      initReflectionFields(plan);
-      renderCanvasStats();
-      renderCategoryPills();
-      renderGoals();
-    }
-
-    function updateCountdown(targetDateStr) {
-      if (!targetDateStr) return;
-      const targetDate = new Date(`${targetDateStr}T23:59:59`);
-      const now = new Date();
-      const diffTime = targetDate - now;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      const daysElem = document.getElementById("countdown-days");
-      if (daysElem) {
-        daysElem.innerText = diffDays > 0 ? `${diffDays} 天` : "已到達期限！";
-      }
-    }
-
-    function renderCanvasStats() {
-      const plan = getActivePlan();
-      if (!plan || !plan.goals) return;
-
-      const canvas = document.getElementById("progress-canvas");
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      const width = canvas.width;
-      const height = canvas.height;
-      
-      const total = plan.goals.length;
-      const completedCount = plan.goals.filter(g => g.completed).length;
-      const percentage = total > 0 ? Math.round((completedCount / total) * 100) : 0;
-
-      // Update Text Displays
-      document.getElementById("completion-percentage").innerText = `${percentage}%`;
-      document.getElementById("completion-count-text").innerText = `${completedCount} / ${total} 已完成`;
-      document.getElementById("progress-text-detail").innerText = `已達成 ${completedCount} 項，剩餘 ${total - completedCount} 項`;
-      document.getElementById("main-progress-bar").style.width = `${percentage}%`;
-
-      // Clear Canvas
-      ctx.clearRect(0, 0, width, height);
-
-      const centerX = width / 2;
-      const centerY = height / 2;
-      const radius = 70;
-      const lineWidth = 14;
-
-      // Draw Background Track Ring
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-      ctx.strokeStyle = document.documentElement.classList.contains('dark') ? '#334155' : '#f1f5f9';
-      ctx.lineWidth = lineWidth;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-
-      // Draw Progress Arc
-      if (percentage > 0) {
-        const startAngle = -Math.PI / 2;
-        const endAngle = startAngle + (Math.PI * 2 * (percentage / 100));
-
-        const gradient = ctx.createLinearGradient(0, 0, width, height);
-        gradient.addColorStop(0, '#0284c7');
-        gradient.addColorStop(1, '#4f46e5');
-
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-        ctx.strokeStyle = gradient;
-        ctx.lineWidth = lineWidth;
-        ctx.lineCap = 'round';
-        ctx.stroke();
-      }
-    }
-
-    function renderCategoryPills() {
-      const container = document.getElementById("category-pills");
-      const plan = getActivePlan();
-      if (!container || !plan) return;
-
-      container.innerHTML = "";
-
-      Object.keys(CATEGORIES).forEach(catKey => {
-        const cat = CATEGORIES[catKey];
-        const count = plan.goals.filter(g => g.category === catKey).length;
-        const compCount = plan.goals.filter(g => g.category === catKey && g.completed).length;
-
-        const pill = document.createElement("div");
-        pill.className = `text-[11px] px-2.5 py-1 rounded-lg font-medium flex items-center gap-1.5 border cursor-pointer transition hover:opacity-80 ${cat.color}`;
-        pill.innerHTML = `
-          <i class="fa-solid ${cat.icon}"></i>
-          <span>${cat.name}</span>
-          <span class="font-bold">(${compCount}/${count})</span>
-        `;
-        pill.onclick = () => {
-          document.getElementById("category-filter").value = catKey;
-          renderGoals();
-        };
-        container.appendChild(pill);
-      });
-    }
-
-    function renderGoals() {
-      const container = document.getElementById("goals-container");
-      const plan = getActivePlan();
-      if (!container || !plan) return;
-
-      const searchTerm = document.getElementById("search-input").value.toLowerCase();
-      const categoryFilter = document.getElementById("category-filter").value;
-      const statusFilter = document.getElementById("status-filter").value;
-
-      const filtered = plan.goals.filter(goal => {
-        const matchesSearch = goal.title.toLowerCase().includes(searchTerm) || (goal.note && goal.note.toLowerCase().includes(searchTerm));
-        const matchesCategory = categoryFilter === "ALL" || goal.category === categoryFilter;
-        let matchesStatus = true;
-        if (statusFilter === "PENDING") matchesStatus = !goal.completed;
-        if (statusFilter === "COMPLETED") matchesStatus = goal.completed;
-
-        return matchesSearch && matchesCategory && matchesStatus;
-      });
-
-      document.getElementById("filtered-count").innerText = `${filtered.length} / ${plan.goals.length}`;
-
-      container.innerHTML = "";
-
-      if (filtered.length === 0) {
-        container.innerHTML = `
-          <div class="col-span-full text-center py-12 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
-            <i class="fa-solid fa-list-check text-4xl text-slate-300 dark:text-slate-600 mb-2"></i>
-            <p class="text-sm text-slate-500 dark:text-slate-400">沒有找到符合條件的事項</p>
-          </div>
-        `;
-        return;
-      }
-
-      filtered.forEach(goal => {
-        const cat = CATEGORIES[goal.category] || { name: "自訂", icon: "fa-star", color: "bg-slate-100 text-slate-700 border-slate-200" };
-        
-        const card = document.createElement("div");
-        card.className = `bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border transition duration-200 flex flex-col justify-between space-y-3 ${
-          goal.completed 
-            ? "border-emerald-300 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/10" 
-            : "border-slate-200/80 dark:border-slate-700/80 hover:border-sky-300 dark:hover:border-sky-700"
-        }`;
-
-        card.innerHTML = `
-          <div class="flex items-center justify-between">
-            <span class="text-[11px] px-2.5 py-0.5 rounded-md font-medium border flex items-center gap-1.5 ${cat.color}">
-              <i class="fa-solid ${cat.icon}"></i>
-              ${cat.name}
-            </span>
-            <span class="text-xs font-mono text-slate-400">#${goal.id}</span>
-          </div>
-
-          <div class="flex items-start space-x-3">
-            <input type="checkbox" id="goal-check-${goal.id}" ${goal.completed ? 'checked' : ''} 
-              class="mt-1 w-5 h-5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 cursor-pointer transition">
-            
-            <div class="flex-grow">
-              <label for="goal-check-${goal.id}" class="text-sm font-medium leading-snug cursor-pointer select-none ${
-                goal.completed ? "line-through text-slate-400 dark:text-slate-500" : "text-slate-800 dark:text-slate-100"
-              }">
-                ${goal.title}
-              </label>
-            </div>
-          </div>
-
-          <div class="pt-2 border-t border-slate-100 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-            <div class="flex items-center space-x-1.5 ${goal.completed ? 'opacity-100' : 'opacity-40'} transition">
-              <i class="fa-regular fa-calendar-check text-slate-400"></i>
-              <span class="text-slate-500 dark:text-slate-400">完成日:</span>
-              <input type="date" id="goal-date-${goal.id}" value="${goal.completedDate || ''}" 
-                class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 text-xs text-slate-700 dark:text-slate-300 focus:outline-none">
-            </div>
-
-            <div class="flex items-center space-x-2 justify-end">
-              <button id="btn-toggle-note-${goal.id}" class="text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400 font-medium text-xs flex items-center space-x-1">
-                <i class="fa-regular fa-note-sticky"></i>
-                <span>${goal.note ? '檢視心得' : '+心得備註'}</span>
-              </button>
-            </div>
-          </div>
-
-          <div id="note-container-${goal.id}" class="${goal.note ? '' : 'hidden'} pt-2">
-            <textarea id="goal-note-${goal.id}" rows="2" placeholder="記下完成時的心情、地點或感想..." 
-              class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500 custom-scrollbar">${goal.note || ''}</textarea>
-          </div>
-        `;
-
-        container.appendChild(card);
-
-        // Bind Card Event Listeners
-        const checkbox = card.querySelector(`#goal-check-${goal.id}`);
-        const dateInput = card.querySelector(`#goal-date-${goal.id}`);
-        const noteToggleBtn = card.querySelector(`#btn-toggle-note-${goal.id}`);
-        const noteContainer = card.querySelector(`#note-container-${goal.id}`);
-        const noteTextarea = card.querySelector(`#goal-note-${goal.id}`);
-
-        checkbox.addEventListener('change', (e) => {
-          goal.completed = e.target.checked;
-          if (goal.completed) {
-            if (!goal.completedDate) {
-              const today = new Date().toISOString().split('T')[0];
-              goal.completedDate = today;
-              dateInput.value = today;
-            }
-            triggerConfetti();
-            showToast(`恭喜達成目標 #${goal.id}！🎉`, "success");
-          }
-          saveState();
-          renderGoals();
-        });
-
-        dateInput.addEventListener('change', (e) => {
-          goal.completedDate = e.target.value;
-          saveState();
-        });
-
-        noteToggleBtn.addEventListener('click', () => {
-          noteContainer.classList.toggle('hidden');
-        });
-
-        noteTextarea.addEventListener('input', (e) => {
-          goal.note = e.target.value;
-          saveState();
-        });
-      });
-    }
-
-    function initReflectionFields(plan) {
-      const ach = document.getElementById('reflection-achievements');
-      const lea = document.getElementById('reflection-learnings');
-      const letterEl = document.getElementById('reflection-letter');
-
-      if (!plan.reflections) {
-        plan.reflections = { achievements: "", learnings: "", letter: "" };
-      }
-
-      ach.value = plan.reflections.achievements || "";
-      lea.value = plan.reflections.learnings || "";
-      letterEl.value = plan.reflections.letter || "";
-
-      ach.oninput = (e) => {
-        plan.reflections.achievements = e.target.value;
-        saveState();
-      };
-      lea.oninput = (e) => {
-        plan.reflections.learnings = e.target.value;
-        saveState();
-      };
-      letterEl.oninput = (e) => {
-        plan.reflections.letter = e.target.value;
-        saveState();
-      };
-    }
-
-    function setupHandlers() {
-      // Plan selector change
-      document.getElementById("plan-selector").addEventListener("change", (e) => {
-        window.appData.activePlanId = e.target.value;
-        saveToLocalStorageLocalOnly();
-        window.renderActivePlan();
-        window.showToast("已切換目標執行週期", "info");
-      });
-
-      // New Plan Modal Handlers
-      const newPlanModal = document.getElementById("modal-new-plan");
-      const btnNewPlan = document.getElementById("btn-new-plan");
-      const btnCloseNewPlan = document.getElementById("btn-close-plan-modal");
-      const btnCancelNewPlan = document.getElementById("btn-cancel-plan-modal");
-      const btnSaveNewPlan = document.getElementById("btn-save-new-plan");
-
-      btnNewPlan.onclick = () => {
-        document.getElementById("new-plan-title").value = "";
-        document.getElementById("new-plan-target-date").value = "2027-12-31";
-        newPlanModal.classList.remove("hidden");
-      };
-      btnCloseNewPlan.onclick = () => newPlanModal.classList.add("hidden");
-      btnCancelNewPlan.onclick = () => newPlanModal.classList.add("hidden");
-
-      btnSaveNewPlan.onclick = () => {
-        const title = document.getElementById("new-plan-title").value.trim() || "新目標執行計畫";
-        const targetDate = document.getElementById("new-plan-target-date").value || "2027-12-31";
-        const genType = document.getElementById("new-plan-generation-type").value;
-
-        const newId = "plan_" + Date.now();
-        const goals = genType === "RANDOM" ? generateRandom100Goals() : generateRandom100Goals();
-
-        const newPlan = {
-          id: newId,
-          title: title,
-          targetDate: targetDate,
-          createdAt: new Date().toISOString(),
-          goals: goals,
-          reflections: { achievements: "", learnings: "", letter: "" }
-        };
-
-        window.appData.plans.push(newPlan);
-        window.appData.activePlanId = newId;
-
-        saveState();
-        window.renderPlanSelector();
-        window.renderActivePlan();
-        newPlanModal.classList.add("hidden");
-        window.showToast("已建立全新的目標執行週期計畫！", "success");
-      };
-
-      // Reset / Randomize Modal Handlers
-      const resetModal = document.getElementById("modal-reset-confirm");
-      document.getElementById("btn-reset-goals").onclick = () => resetModal.classList.remove("hidden");
-      document.getElementById("btn-cancel-reset").onclick = () => resetModal.classList.add("hidden");
-
-      // Randomize dynamic 100 new goals
-      document.getElementById("btn-confirm-randomize").onclick = () => {
-        const plan = getActivePlan();
-        if (plan) {
-          plan.goals = generateRandom100Goals();
-          plan.reflections = { achievements: "", learnings: "", letter: "" };
-          saveState();
-          renderActivePlan();
-          showToast("已成功更換抽取全新的 100 項目標清單！🎲", "success");
-        }
-        resetModal.classList.add("hidden");
-      };
-
-      // Reset completion status only
-      document.getElementById("btn-confirm-reset-progress").onclick = () => {
-        const plan = getActivePlan();
-        if (plan) {
-          plan.goals.forEach(g => {
-            g.completed = false;
-            g.completedDate = "";
-          });
-          saveState();
-          renderActivePlan();
-          showToast("已清空打勾進度，保留原有項目", "success");
-        }
-        resetModal.classList.add("hidden");
-      };
-
-      // Add Custom Goal Modal Handlers
-      const customModal = document.getElementById("modal-add");
-      document.getElementById("btn-add-custom").onclick = () => customModal.classList.remove("hidden");
-      document.getElementById("btn-close-modal").onclick = () => customModal.classList.add("hidden");
-      document.getElementById("btn-cancel-modal").onclick = () => customModal.classList.add("hidden");
-
-      document.getElementById("btn-save-custom").onclick = () => {
-        const title = document.getElementById("modal-title").value.trim();
-        const category = document.getElementById("modal-category").value;
-
-        if (!title) {
-          showToast("請輸入目標項目名稱！", "error");
-          return;
-        }
-
-        const plan = getActivePlan();
-        const newId = plan.goals.length > 0 ? Math.max(...plan.goals.map(g => g.id)) + 1 : 1;
-
-        plan.goals.push({
-          id: newId,
-          category: category,
-          title: title,
-          completed: false,
-          completedDate: "",
-          note: ""
-        });
-
-        saveState();
-        renderGoals();
-        customModal.classList.add("hidden");
-        document.getElementById("modal-title").value = "";
-        showToast("成功新增自訂目標項目！", "success");
-      };
-
-      // Theme toggle
-      document.getElementById("theme-toggle").onclick = () => {
-        document.documentElement.classList.toggle("dark");
-        renderCanvasStats();
-      };
-
-      // JSON Export/Import
-      document.getElementById("btn-export-json").onclick = () => {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.appData, null, 2));
-        const anchor = document.createElement('a');
-        anchor.setAttribute("href", dataStr);
-        anchor.setAttribute("download", `LifeGoals_Backup_${new Date().toISOString().split('T')[0]}.json`);
-        document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-        window.showToast("JSON 備份檔已開始下載", "success");
-      };
-
-      const importInput = document.getElementById("input-import-file");
-      document.getElementById("btn-import-json").onclick = () => importInput.click();
-      importInput.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          try {
-            const imported = JSON.parse(event.target.result);
-            if (imported && Array.isArray(imported.plans)) {
-              window.appData = imported;
-              saveState();
-              window.renderPlanSelector();
-              window.renderActivePlan();
-              window.showToast("完整備份檔案匯入成功！", "success");
-            } else {
-              window.showToast("格式不相符！", "error");
-            }
-          } catch(err) {
-            window.showToast("讀取失敗: " + err.message, "error");
-          }
-        };
-        reader.readAsText(file);
-      };
-
-      // Search & Filters
-      document.getElementById("search-input").oninput = renderGoals;
-      document.getElementById("category-filter").onchange = renderGoals;
-      document.getElementById("status-filter").onchange = renderGoals;
-
-      // Window Resize
-      window.onresize = renderCanvasStats;
-
-      // PDF Export
-      document.getElementById("btn-export-pdf").onclick = async () => {
-        if (typeof html2pdf === 'undefined') {
-          showToast("PDF 模組載入中...", "error");
-          return;
-        }
-
-        showToast("正在準備 PDF 報告輸出...", "info");
-        const plan = getActivePlan();
-
-        document.getElementById("pdf-export-title").innerText = `${plan.title} - 100 項必做事項與盤點報告`;
-        document.getElementById("pdf-export-date").innerText = new Date().toLocaleDateString('zh-TW');
-        document.getElementById("pdf-export-target-date").innerText = plan.targetDate;
-        
-        const compCount = plan.goals.filter(g => g.completed).length;
-        document.getElementById("pdf-export-progress").innerText = `${compCount} / ${plan.goals.length} (${Math.round((compCount/plan.goals.length)*100)}%)`;
-
-        const element = document.getElementById('export-container');
-        const opt = {
-          margin:       [0.3, 0.3, 0.4, 0.3],
-          filename:     `${plan.title}_報告_${new Date().toISOString().split('T')[0]}.pdf`,
-          image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 2, useCORS: true, logging: false },
-          jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-        };
-
-        try {
-          await html2pdf().set(opt).from(element).save();
-          showToast("PDF 匯出完成！", "success");
-        } catch(e) {
-          showToast("匯出失敗，可使用瀏覽器列印功能另存 PDF", "error");
-        }
-      };
-    }
-
-    function initCategoryDropdowns() {
-      const catFilter = document.getElementById("category-filter");
-      const modalCat = document.getElementById("modal-category");
-
-      Object.keys(CATEGORIES).forEach(key => {
-        const cat = CATEGORIES[key];
-        
-        const opt1 = document.createElement("option");
-        opt1.value = key;
-        opt1.textContent = `${cat.name}`;
-        catFilter.appendChild(opt1);
-
-        const opt2 = document.createElement("option");
-        opt2.value = key;
-        opt2.textContent = `${cat.name}`;
-        modalCat.appendChild(opt2);
-      });
-    }
-
-    function triggerConfetti() {
-      const canvas = document.getElementById("confetti-canvas");
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-
-      const particles = [];
-      const colors = ['#0284c7', '#4f46e5', '#10b981', '#f59e0b', '#ec4899'];
-
-      for (let i = 0; i < 45; i++) {
-        particles.push({
-          x: window.innerWidth / 2,
-          y: window.innerHeight / 2,
-          vx: (Math.random() - 0.5) * 14,
-          vy: (Math.random() - 0.7) * 14,
-          size: Math.random() * 6 + 4,
-          color: colors[Math.floor(Math.random() * colors.length)],
-          alpha: 1,
-          decay: Math.random() * 0.02 + 0.015
-        });
-      }
-
-      function animate() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        let active = false;
-
-        particles.forEach(p => {
-          if (p.alpha > 0) {
-            active = true;
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.2;
-            p.alpha -= p.decay;
-
-            ctx.save();
-            ctx.globalAlpha = Math.max(0, p.alpha);
-            ctx.fillStyle = p.color;
-            ctx.fillRect(p.x, p.y, p.size, p.size);
-            ctx.restore();
-          }
-        });
-
-        if (active) {
-          requestAnimationFrame(animate);
-        } else {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-      }
-
-      animate();
-    }
-
-    window.showToast = function(message, type = 'info') {
-      const container = document.getElementById("toast-container");
-      if (!container) return;
-
-      const toast = document.createElement("div");
-      let iconClass = "fa-circle-info text-sky-500";
-      let bgClass = "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100";
-
-      if (type === 'success') iconClass = "fa-circle-check text-emerald-500";
-      if (type === 'error') iconClass = "fa-circle-exclamation text-rose-500";
-
-      toast.className = `flex items-center space-x-3 px-4 py-3 rounded-xl shadow-xl border ${bgClass} text-sm transition-all duration-300 pointer-events-auto toast-enter`;
-      toast.innerHTML = `
-        <i class="fa-solid ${iconClass} text-base"></i>
-        <span class="font-medium">${message}</span>
-      `;
-
-      container.appendChild(toast);
-
-      setTimeout(() => {
-        toast.classList.remove("toast-enter");
-        toast.classList.add("toast-show");
-      }, 10);
-
-      setTimeout(() => {
-        toast.classList.remove("toast-show");
-        toast.classList.add("toast-enter");
-        setTimeout(() => toast.remove(), 300);
-      }, 3000);
-    }
-
-    window.addEventListener('load', () => {
-      initCategoryDropdowns();
-      setupHandlers();
-    });
-  </script>
-</body>
-</html>
+  } catch (error) {
+    alert("註冊失敗：" + getErrorMessage(error.code));
+  }
+};
+
+// 忘記密碼
+window.handleForgotPassword = async function(email) {
+  if (!email) {
+    alert("請先輸入您的電子信箱！");
+    return;
+  }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    alert("重設密碼信件已發送至您的信箱，請至信箱收信並重設密碼。");
+  } catch (error) {
+    alert("發送失敗：" + getErrorMessage(error.code));
+  }
+};
+
+// 登出
+window.handleLogout = async function() {
+  try {
+    await signOut(auth);
+    location.reload();
+  } catch (error) {
+    console.error("登出失敗", error);
+  }
+};
+
+// Firebase 錯誤代碼中文轉換
+function getErrorMessage(code) {
+  switch (code) {
+    case 'auth/user-not-found': return '找不到此帳號，請先註冊。';
+    case 'auth/wrong-password': return '密碼輸入錯誤。';
+    case 'auth/email-already-in-use': return '此信箱已被註冊。';
+    case 'auth/weak-password': return '密碼強度不足，請輸入至少 6 位數。';
+    case 'auth/invalid-email': return '請輸入有效的電子信箱格式。';
+    default: return '發生未知錯誤，請稍後再試。';
+  }
+}
