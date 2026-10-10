@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>願景與 100 項人生必做清單 - 雲端同步版</title>
+  <title>願景與 100 項人生必做清單 - 雲端多週期同步版</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -12,34 +12,34 @@
 </head>
 <body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
 
-  <!-- 登入 / 註冊遮罩層 (未登入時顯示) -->
-  <div id="authOverlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+  <!-- 登入 / 註冊 / 忘記密碼遮罩層 (未登入時顯示) -->
+  <div id="authOverlay" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl max-w-md w-full p-8 relative overflow-hidden">
       
       <!-- 標題區 -->
-      <div class="text-center mb-8">
-        <div class="w-16 h-16 bg-indigo-600 rounded-2xl mx-auto flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-indigo-500/30 mb-3">100</div>
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 bg-indigo-600 rounded-2xl mx-auto flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-indigo-500/30 mb-3">🎯</div>
         <h2 id="authTitle" class="text-2xl font-bold text-white">歡迎回來</h2>
-        <p class="text-sm text-slate-400 mt-1">登入以跨裝置同步您的 100 項人生願景與進度</p>
+        <p id="authSubtitle" class="text-sm text-slate-400 mt-1">登入以同步您的專屬人生願景與多週期計畫</p>
       </div>
 
-      <!-- 登入表單 -->
-      <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+      <!-- 登入/註冊/忘記密碼表單 -->
+      <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-4">
         <div id="nameFieldContainer" class="hidden">
-          <label class="block text-xs font-semibold text-slate-400 mb-1">顯示名稱 (姓名/暱稱)</label>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">顯示名稱 (您的姓名或暱稱)</label>
           <input type="text" id="regName" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" placeholder="例如：志鵬">
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-400 mb-1">電子信箱</label>
           <input type="email" id="authEmail" required class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" placeholder="yourname@example.com">
         </div>
-        <div>
+        <div id="passwordFieldContainer">
           <label class="block text-xs font-semibold text-slate-400 mb-1">密碼 (至少 6 碼)</label>
           <input type="password" id="authPassword" required minlength="6" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm" placeholder="••••••••">
         </div>
 
         <div class="flex items-center justify-between text-xs">
-          <button type="button" onclick="toggleForgotPassword()" class="text-indigo-400 hover:underline">忘記密碼？</button>
+          <button type="button" onclick="switchAuthMode('forgot')" id="forgotPasswordBtn" class="text-indigo-400 hover:underline">忘記密碼？</button>
         </div>
 
         <button type="submit" id="authSubmitBtn" class="w-full py-3.5 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/30">
@@ -47,24 +47,49 @@
         </button>
       </form>
 
-      <!-- 切換按鈕 -->
-      <div class="text-center mt-6 text-xs text-slate-400">
+      <!-- 切換模式按鈕 -->
+      <div class="text-center mt-6 text-xs text-slate-400 space-x-1">
         <span id="authToggleText">還沒有帳號？</span>
-        <button type="button" onclick="toggleAuthMode()" id="authToggleBtn" class="text-indigo-400 font-semibold hover:underline ml-1">立即註冊</button>
+        <button type="button" onclick="switchAuthMode('toggle')" id="authToggleBtn" class="text-indigo-400 font-semibold hover:underline">立即註冊</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新增週期計畫彈跳視窗 -->
+  <div id="newPlanModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <h3 class="text-lg font-bold text-white">建立新的執行週期計畫</h3>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">計畫名稱</label>
+        <input type="text" id="newPlanTitleInput" class="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="例如：2027 年人生大躍進計畫">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">目標完成期限</label>
+        <input type="date" id="newPlanDateInput" class="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div class="flex justify-end space-x-3 pt-2">
+        <button onclick="closeNewPlanModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs">取消</button>
+        <button onclick="confirmCreateNewPlan()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold">確認建立</button>
       </div>
     </div>
   </div>
 
   <!-- 頂部導覽列 -->
   <header class="bg-slate-900/80 backdrop-blur border-b border-slate-800 sticky top-0 z-30">
-    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between flex-wrap gap-2">
       <div class="flex items-center space-x-3">
         <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md shadow-indigo-600/30">🎯</div>
         <h1 class="text-base sm:text-lg font-bold text-white tracking-wide">願景與 100 項人生必做清單</h1>
       </div>
-      
-      <div class="flex items-center space-x-3">
-        <span id="userDisplayName" class="text-xs sm:text-sm text-slate-300 font-medium hidden sm:inline">載入中...</span>
+
+      <!-- 週期切換與功能列 -->
+      <div class="flex items-center space-x-2 flex-wrap">
+        <select id="planSelector" onchange="switchActivePlan(this.value)" class="bg-slate-800 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+          <!-- 動態載入各個週期計畫 -->
+        </select>
+        <button onclick="openNewPlanModal()" class="text-xs px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 rounded-xl transition font-medium">+ 新週期</button>
+        <button onclick="resetAndChangeGoals()" class="text-xs px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 rounded-xl transition font-medium">🎲 重設/換100項</button>
+        <span id="userDisplayName" class="text-xs text-slate-300 font-medium px-2">載入中...</span>
         <button onclick="handleLogout()" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition">登出</button>
       </div>
     </div>
@@ -76,27 +101,27 @@
     <!-- 頂部儀表板與進度卡片 -->
     <section class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-center">
-        <!-- 進度圓餅/環形數字 -->
+        <!-- 進度環形數字 -->
         <div class="flex items-center space-x-5 md:border-r border-slate-800 pr-4">
           <div class="relative w-24 h-24 flex items-center justify-center bg-slate-800/80 rounded-full border-4 border-slate-700">
             <span id="progressPercentText" class="text-2xl font-bold text-white">0%</span>
           </div>
           <div>
             <div id="completedRatioText" class="text-lg font-bold text-white">0 / 100 已完成</div>
-            <div class="text-xs text-slate-400 mt-1">跨裝置雲端同步中</div>
+            <div id="daysRemainingText" class="text-xs text-slate-400 mt-1">期限倒數計算中...</div>
           </div>
         </div>
 
-        <!-- 專案標題與分類標籤 -->
+        <!-- 專案標題與分類統計 -->
         <div class="md:col-span-3 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <h2 id="currentPlanTitle" class="text-xl font-bold text-white tracking-wide">2028 年底終極願景計畫</h2>
-            <span class="text-xs px-3 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full">目標期限：2028-12-31</span>
+            <h2 id="currentPlanTitle" class="text-xl font-bold text-white tracking-wide">載入中計畫...</h2>
+            <span id="currentPlanDeadline" class="text-xs px-3 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full">目標期限：---</span>
           </div>
           
-          <!-- 10大類別小標籤 -->
+          <!-- 10大類別小標籤統計 -->
           <div id="categoryBadges" class="flex flex-wrap gap-1.5 pt-1">
-            <!-- 動態生成分類統計 -->
+            <!-- 動態生成 -->
           </div>
         </div>
       </div>
@@ -162,10 +187,11 @@
       doc, 
       setDoc, 
       collection, 
-      getDocs 
+      getDocs,
+      deleteDoc 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // 您的 Firebase 設定
+    // 您的 Firebase 專案設定
     const firebaseConfig = {
       apiKey: "AIzaSyCUJnYsOHmLGV6QU93VrVoia4LBP77HS_c",
       authDomain: "teastd-a57c4.firebaseapp.com",
@@ -183,15 +209,94 @@
     let currentUser = null;
     let userPlans = {};
     let activePlanId = null;
-    let isRegisterMode = false;
-    let isForgotMode = false;
+    let authMode = 'login'; // 'login', 'register', 'forgot'
 
     const categoriesList = [
       "職涯發展", "理財投資", "健康運動", "自我成長", "旅行探索", 
       "人際家庭", "生活品味", "創作作品", "心靈靈性", "社會奉獻"
     ];
 
-    // 監聽登入狀態
+    // 豐富的目標題庫池（供動態隨機換題與重設使用）
+    const goalPools = {
+      "職涯發展": [
+        "學習並熟練運用 AI 工具提升 50% 工作效率", "升遷、轉職至理想職位或完成一次職涯跳躍", "獨立談成一次重大業務合作或合約",
+        "建立優質專業 networking 圈（認識 10 位領域優秀同仁）", "考取一項對職涯有實質幫助的高階專業證照",
+        "主辦一場大型專案發表會或跨部門協作專案", "在專業領域發表 3 篇深度技術或行業分析文章", "建立個人專業履歷與作品集網站"
+      ],
+      "理財投資": [
+        "建立完善的個人資產配置與自動化投資系統", "達成半年以上的緊急預備金安全存款水位", "研究並佈局至少 3 檔優質長期配息 ETF",
+        "完成一整年的記帳與消費優化檢討", "創造非主動收入來源（如版稅、股利或副業營收）", "閱讀 5 本經典投資理財與財商書籍",
+        "釐清並還清所有不必要的負債與信用卡循環利息"
+      ],
+      "健康運動": [
+        "挑戰並完成一場半程馬拉松或 10 公里路跑", "養成每週至少規律運動 3 次的習慣", "體脂率降至標準健康範圍或練出明顯線條",
+        "戒掉含糖飲料與宵夜，維持清淡健康飲食", "進行一次完整的全身健康檢查", "每晚維持 7-8 小時高品質睡眠與規律作息",
+        "學會一項全新運動（如游泳、網球、攀岩或瑜珈）"
+      ],
+      "自我成長": [
+        "一年內讀完並做筆記輸出 24 本好書", "掌握一門全新外語或通過中高級檢定", "每天進行 15 分鐘冥想與心靈沉澱",
+        "養成早起（5:30 - 6:00 之間）的高效晨間習慣", "完成一門線上優質專業學程並取得結業證書",
+        "學習高效時間管理與番茄鐘工作法", "每週撰寫一篇深刻的自我反思週記"
+      ],
+      "旅行探索": [
+        "規劃並完成一趟為期 5 天以上的深度鐵道雪國之旅", "獨自一人完成一趟國內或國外背包客旅行", "造訪 3 個從未去過的台灣特色鄉鎮與古道",
+        "在海島國家體驗潛水或衝浪活動", "品嚐 10 家在地知名米其林或特色私廚料理", "收集 5 張不同國家的特色風景明信片",
+        "體驗一次高空彈跳、熱氣球或跳傘極限活動"
+      ],
+      "人際家庭": [
+        "安排每月一次與父母的深度聚餐或孝親旅行", "舉辦一場溫馨的親朋好友週末聚會", "手寫並寄出 5 張感謝卡給生命中的貴人",
+        "為伴侶精心策劃一場難忘的浪漫紀念日", "每季至少陪伴好友深度談心一次", "加入一個志工團體或公益社群回饋社會"
+      ],
+      "生活品味": [
+        "親手打造極簡且舒適的居家工作/生活空間", "學會手沖精品咖啡或品嚐 5 種頂級莊園豆",
+        "挑選並購入一件質感極佳的經典耐用衣物或配件", "在家親手烹調 10 道拿手健康料理", "種植 3 盆綠意植栽並照顧它們茁壯"
+      ],
+      "創作作品": [
+        "出版一本電子書、個人專題或完成音樂創作", "建立個人部落格或自媒體頻道並持續更新 10 篇/部",
+        "手繪或攝影記錄生活美好瞬間並舉辦小型線上展覽", "製作一個能解決實際痛點的小型軟體工具", "寫下 5 封給未來自己的時空膠囊信件"
+      ],
+      "心靈靈性": [
+        "完成一趟寺廟靜修、心靈課程或大自然芬多精洗禮", "列出 50 件人生感恩清單並深切體會", "學會對無能為力的事徹底放手與自我和解",
+        "進行一次為期一週的數位排毒（減少社群網路使用）"
+      ],
+      "社會奉獻": [
+        "參與偏鄉教育、環保淨灘或動物保護志工服務", "定期小額資助弱勢兒童或流浪動物機構", "將用不到的書籍與物資捐贈給需要的人",
+        "在職場或社群中無私指導與協助 3 位後輩新手"
+      ]
+    };
+
+    // 隨機或依序產生 100 項豐富目標
+    function generateRandom100Goals() {
+      const goals = [];
+      let idCounter = 1;
+      
+      // 確保 10 大類別平均分配（每類 10 項，共 100 項）
+      categoriesList.forEach(cat => {
+        const pool = [...goalPools[cat]];
+        // 隨機打亂該分類題庫
+        pool.sort(() => Math.random() - 0.5);
+        
+        for (let i = 0; i < 10; i++) {
+          const text = pool[i % pool.length] + (i >= pool.length ? ` (進階版 #${i+1})` : '');
+          goals.push({
+            id: idCounter++,
+            category: cat,
+            text: text,
+            completed: false,
+            completedAt: "",
+            note: ""
+          });
+        }
+      });
+
+      // 打亂整體 100 項順序讓畫面更多元
+      goals.sort(() => Math.random() - 0.5);
+      // 重新賦予流水號 1~100
+      goals.forEach((g, idx) => g.id = idx + 1);
+      return goals;
+    }
+
+    // 監聽登入狀態 (Firebase 本地持久化自動維持登入)
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         currentUser = user;
@@ -206,7 +311,7 @@
       }
     });
 
-    // 從雲端載入資料
+    // 從雲端載入該帳號的所有週期計畫
     async function loadUserDataFromCloud(uid) {
       try {
         const plansRef = collection(db, "users", uid, "plans");
@@ -216,40 +321,28 @@
           userPlans[docSnap.id] = docSnap.data();
         });
 
-        // 若雲端無資料，建立預設 100 目標計畫
+        // 若雲端完全無資料，建立預設 2028 年計畫
         if (Object.keys(userPlans).length === 0) {
-          const defaultPlan = createDefaultPlan();
+          const defaultPlan = {
+            id: "plan_default",
+            title: "2028 年底終極願景計畫",
+            targetDate: "2028-12-31",
+            goals: generateRandom100Goals()
+          };
           userPlans[defaultPlan.id] = defaultPlan;
           await savePlanToCloud(defaultPlan);
         }
 
+        // 預設選取第一個計畫
         activePlanId = Object.keys(userPlans)[0];
+        renderPlanSelector();
         renderApp();
       } catch (error) {
         console.error("載入雲端資料失敗:", error);
       }
     }
 
-    function createDefaultPlan() {
-      const goals = [];
-      for (let i = 1; i <= 100; i++) {
-        const cat = categoriesList[(i - 1) % categoriesList.length];
-        goals.push({
-          id: i,
-          category: cat,
-          text: `人生願景目標第 ${i} 件事：在 ${cat} 領域達成重要突破`,
-          completed: false,
-          completedAt: "",
-          note: ""
-        });
-      }
-      return {
-        id: "plan_2028",
-        title: "2028 年底終極願景計畫",
-        goals: goals
-      };
-    }
-
+    // 儲存計畫至雲端
     async function savePlanToCloud(plan) {
       if (!currentUser) return;
       try {
@@ -260,16 +353,87 @@
       }
     }
 
-    // 渲染主畫面
+    // 渲染上方週期選單下拉框
+    window.renderPlanSelector = function() {
+      const selector = document.getElementById("planSelector");
+      let html = "";
+      Object.values(userPlans).forEach(plan => {
+        html += `<option value="${plan.id}" ${plan.id === activePlanId ? 'selected' : ''}>🎯 ${plan.title} (${plan.targetDate})</option>`;
+      });
+      selector.innerHTML = html;
+    };
+
+    // 切換作用中的週期計畫
+    window.switchActivePlan = function(planId) {
+      if (userPlans[planId]) {
+        activePlanId = planId;
+        renderApp();
+      }
+    };
+
+    // 開啟/關閉 新增週期彈跳視窗
+    window.openNewPlanModal = function() {
+      document.getElementById("newPlanModal").classList.remove("hidden");
+      document.getElementById("newPlanTitleInput").value = "";
+      document.getElementById("newPlanDateInput").value = "2027-12-31";
+    };
+    window.closeNewPlanModal = function() {
+      document.getElementById("newPlanModal").classList.add("hidden");
+    };
+
+    // 確認建立新週期
+    window.confirmCreateNewPlan = async function() {
+      const title = document.getElementById("newPlanTitleInput").value.trim() || "新年度人生願景計畫";
+      const targetDate = document.getElementById("newPlanDateInput").value || "2027-12-31";
+      
+      const newPlanId = "plan_" + Date.now();
+      const newPlan = {
+        id: newPlanId,
+        title: title,
+        targetDate: targetDate,
+        goals: generateRandom100Goals()
+      };
+
+      userPlans[newPlanId] = newPlan;
+      activePlanId = newPlanId;
+      
+      await savePlanToCloud(newPlan);
+      closeNewPlanModal();
+      renderPlanSelector();
+      renderApp();
+    };
+
+    // 重設/換 100 項目標（更換全新不同的 100 項）
+    window.resetAndChangeGoals = async function() {
+      const plan = userPlans[activePlanId];
+      if (!plan) return;
+
+      if (confirm(`確定要為「${plan.title}」重新洗牌並更換全新不同的 100 項人生清單嗎？目前的勾選狀態將會重設。`)) {
+        plan.goals = generateRandom100Goals();
+        await savePlanToCloud(plan);
+        renderApp();
+        alert("已成功為您換上全新不同的 100 項人生目標！");
+      }
+    };
+
+    // 渲染主畫面與儀表板
     window.renderApp = function() {
       const plan = userPlans[activePlanId];
       if (!plan) return;
 
       document.getElementById("currentPlanTitle").textContent = plan.title;
+      document.getElementById("currentPlanDeadline").textContent = `目標期限：${plan.targetDate || '未設定'}`;
+
+      // 計算倒數天數
+      if (plan.targetDate) {
+        const diffTime = new Date(plan.targetDate) - new Date();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        document.getElementById("daysRemainingText").textContent = diffDays >= 0 ? `距離目標截止剩餘 ${diffDays} 天` : `已超過期限`;
+      }
 
       const total = plan.goals.length;
       const completedCount = plan.goals.filter(g => g.completed).length;
-      const percent = Math.round((completedCount / total) * 100);
+      const percent = total > 0 ? Math.round((completedCount / total) * 100) : 0;
 
       document.getElementById("progressPercentText").textContent = `${percent}%`;
       document.getElementById("completedRatioText").textContent = `${completedCount} / ${total} 已完成`;
@@ -286,7 +450,7 @@
       filterGoals();
     };
 
-    // 篩選與渲染目標列表
+    // 篩選與渲染目標卡片清單
     window.filterGoals = function() {
       const plan = userPlans[activePlanId];
       if (!plan) return;
@@ -318,7 +482,7 @@
 
           <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/60 text-xs text-slate-400">
             <div class="flex items-center space-x-2">
-              <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 rounded">${g.category}</span>
+              <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 rounded">${g.category || '一般'}</span>
               <span class="text-slate-500">完成日期: ${g.completedAt || 'yyyy/mm/dd'}</span>
             </div>
             <div>
@@ -355,21 +519,72 @@
       }
     };
 
-    // 認證表單處理
-    window.handleLoginSubmit = async function(event) {
+    // 認證介面切換 (登入 / 註冊 / 忘記密碼)
+    window.switchAuthMode = function(mode) {
+      if (mode === 'toggle') {
+        authMode = authMode === 'login' ? 'register' : 'login';
+      } else if (mode === 'forgot') {
+        authMode = 'forgot';
+      }
+
+      const title = document.getElementById("authTitle");
+      const subtitle = document.getElementById("authSubtitle");
+      const submitBtn = document.getElementById("authSubmitBtn");
+      const nameContainer = document.getElementById("nameFieldContainer");
+      const passContainer = document.getElementById("passwordFieldContainer");
+      const toggleText = document.getElementById("authToggleText");
+      const toggleBtn = document.getElementById("authToggleBtn");
+      const forgotBtn = document.getElementById("forgotPasswordBtn");
+
+      if (authMode === 'register') {
+        title.textContent = "建立專屬帳號";
+        subtitle.textContent = "開啟您的多週期願景管理與雲端同步";
+        submitBtn.textContent = "立即註冊";
+        nameContainer.classList.remove("hidden");
+        passContainer.classList.remove("hidden");
+        toggleText.textContent = "已經有帳號？";
+        toggleBtn.textContent = "返回登入";
+        forgotBtn.style.display = "none";
+      } else if (authMode === 'forgot') {
+        title.textContent = "重設密碼";
+        subtitle.textContent = "輸入您的註冊信箱以接收密碼重設信件";
+        submitBtn.textContent = "發送重設信件";
+        nameContainer.classList.add("hidden");
+        passContainer.classList.add("hidden");
+        toggleText.textContent = "想起來了？";
+        toggleBtn.textContent = "返回登入";
+        forgotBtn.style.display = "none";
+      } else {
+        authMode = 'login';
+        title.textContent = "歡迎回來";
+        subtitle.textContent = "登入以同步您的專屬人生願景與多週期計畫";
+        submitBtn.textContent = "登入系統";
+        nameContainer.classList.add("hidden");
+        passContainer.classList.remove("hidden");
+        toggleText.textContent = "還沒有帳號？";
+        toggleBtn.textContent = "立即註冊";
+        forgotBtn.style.display = "inline-block";
+      }
+    };
+
+    // 處理登入、註冊與忘記密碼送出
+    window.handleAuthSubmit = async function(event) {
       event.preventDefault();
-      const email = document.getElementById("authEmail").value;
+      const email = document.getElementById("authEmail").value.trim();
       const password = document.getElementById("authPassword").value;
-      const name = document.getElementById("regName").value;
+      const name = document.getElementById("regName").value.trim();
 
       try {
-        if (isForgotMode) {
+        if (authMode === 'forgot') {
           await sendPasswordResetEmail(auth, email);
-          alert("重設密碼信件已發送，請檢查您的電子信箱。");
-          toggleForgotPassword();
-        } else if (isRegisterMode) {
+          alert("重設密碼信件已發送至您的信箱，請至信箱收信並重設密碼。");
+          switchAuthMode('login');
+        } else if (authMode === 'register') {
           const res = await createUserWithEmailAndPassword(auth, email, password);
-          if (name) await updateProfile(res.user, { displayName: name });
+          if (name) {
+            await updateProfile(res.user, { displayName: name });
+          }
+          alert("註冊成功！已自動登入系統。");
         } else {
           await signInWithEmailAndPassword(auth, email, password);
         }
@@ -378,23 +593,7 @@
       }
     };
 
-    window.toggleAuthMode = function() {
-      isRegisterMode = !isRegisterMode;
-      isForgotMode = false;
-      document.getElementById("nameFieldContainer").classList.toggle("hidden", !isRegisterMode);
-      document.getElementById("authTitle").textContent = isRegisterMode ? "建立專屬帳號" : "歡迎回來";
-      document.getElementById("authSubmitBtn").textContent = isRegisterMode ? "立即註冊" : "登入系統";
-      document.getElementById("authToggleText").textContent = isRegisterMode ? "已經有帳號？" : "還沒有帳號？";
-      document.getElementById("authToggleBtn").textContent = isRegisterMode ? "返回登入" : "立即註冊";
-    };
-
-    window.toggleForgotPassword = function() {
-      isForgotMode = !isForgotMode;
-      document.getElementById("nameFieldContainer").classList.add("hidden");
-      document.getElementById("authTitle").textContent = isForgotMode ? "重設密碼" : "歡迎回來";
-      document.getElementById("authSubmitBtn").textContent = isForgotMode ? "發送重設信件" : "登入系統";
-    };
-
+    // 登出
     window.handleLogout = async function() {
       await signOut(auth);
       location.reload();
